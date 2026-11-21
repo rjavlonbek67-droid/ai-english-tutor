@@ -753,7 +753,49 @@ h1 {
 }
 
 .avatar[data-state="surprised"] {
-  animation: surprise-pop 0.55s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  animation: surprise-pop 0.62s cubic-bezier(0.2, 1.35, 0.32, 1) both;
+}
+
+.avatar[data-state="speaking"][data-mood="lively"] {
+  animation: speak-bob-lively 0.28s ease-in-out infinite;
+}
+
+.avatar[data-state="speaking"][data-mood="lively"] .face {
+  box-shadow:
+    0 0 0 6px #ff8eae,
+    0 0 26px 8px rgba(255, 110, 150, 0.28),
+    0 22px 40px rgba(196, 64, 104, 0.2);
+}
+
+.avatar[data-state="speaking"][data-mood="lively"] .brow-left,
+.avatar[data-state="speaking"][data-mood="uz"] .brow-left {
+  animation: speak-brow-left 0.28s ease-in-out infinite;
+}
+
+.avatar[data-state="speaking"][data-mood="lively"] .brow-right,
+.avatar[data-state="speaking"][data-mood="uz"] .brow-right {
+  animation: speak-brow-right 0.28s ease-in-out infinite;
+}
+
+.avatar[data-state="speaking"][data-mood="lively"] .mouth-inner {
+  animation: talk-lively 0.18s ease-in-out infinite alternate;
+}
+
+.avatar[data-state="speaking"][data-mood="uz"] {
+  animation: speak-bob 0.36s ease-in-out infinite;
+}
+
+.avatar[data-state="speaking"][data-mood="uz"] .mouth-inner {
+  animation: talk 0.26s ease-in-out infinite alternate;
+}
+
+.avatar[data-state="speaking"][data-mood="clear"] {
+  animation: speak-bob 0.55s ease-in-out infinite;
+}
+
+.avatar[data-state="speaking"][data-mood="clear"] .mouth-inner {
+  width: 46px;
+  animation: talk 0.46s ease-in-out infinite alternate;
 }
 
 .avatar[data-state="surprised"] .face {
@@ -1190,15 +1232,43 @@ h1 {
   }
 }
 
+@keyframes speak-bob-lively {
+  from {
+    transform: translateY(0) rotate(-2.4deg);
+  }
+  to {
+    transform: translateY(-9px) rotate(2.6deg);
+  }
+}
+
+@keyframes talk-lively {
+  from {
+    height: 10px;
+    width: 28px;
+    border-radius: 12px;
+  }
+  to {
+    height: 48px;
+    width: 56px;
+    border-radius: 46% 46% 52% 52%;
+  }
+}
+
 @keyframes surprise-pop {
   0% {
-    transform: scale(1);
+    transform: scale(1) rotate(0);
   }
-  40% {
-    transform: scale(1.07, 0.96) translateY(-6px);
+  16% {
+    transform: scale(1.1, 0.92) translateY(-12px) rotate(-4deg);
+  }
+  34% {
+    transform: scale(1.04) translateY(-3px) rotate(3.5deg);
+  }
+  52% {
+    transform: scale(1.06) translateY(-8px) rotate(-2deg);
   }
   100% {
-    transform: scale(1) translateY(0);
+    transform: scale(1) rotate(0);
   }
 }
 

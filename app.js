@@ -61,25 +61,25 @@ const TUTOR_MODES = {
     label: "Noldan (A1–A2)",
     hint: "Oddiy gaplar, asosiy so‘zlar, sabrli izoh.",
     coach:
-      "Teach from zero. Use very short sentences and one new pattern at a time. Patient encouragement may mix simple Uzbek and simple English. Correct only the single most useful mistake. End the coaching tip with a line the learner can repeat today.",
+      "Teach from zero. Spoken lines stay short and in everyday Uzbek, with the one English pattern inside quotes. Be direct but kind. Correct only the single most useful mistake, then ask them to repeat that English line.",
   },
   conversation: {
     label: "Jonli Muloqot (B1–B2)",
     hint: "Kundalik nutq, idiomalar va phrasal verb.",
     coach:
-      "Coach natural everyday speaking. Offer one idiom or phrasal verb when it fits. Support Uzbek-English code-switching, then show the fluent English version. Keep the tone lively, like a conversation partner.",
+      "Coach natural everyday speaking. Offer one idiom or phrasal verb inside quotes when it fits. The talk around it is lively spoken Uzbek, like a friend, then one follow-up question.",
   },
   advanced: {
     label: "Mukammal / Advanced (C1)",
     hint: "Nozik ifoda va aniqroq lug‘at.",
     coach:
-      "Coach nuanced C1–C2 English. Replace a vague word with a sharper one. Comment on tone, collocation, register, and natural stress. Keep praise specific and the upgrade small enough to use immediately.",
+      "Coach nuanced C1–C2 English. In spoken Uzbek, name the tone or collocation problem in one line, put the sharper English inside quotes, and keep the upgrade small enough to say immediately.",
   },
   ielts: {
     label: "IELTS Tayyorgarlik (Band 6.5–8.5+)",
     hint: "Speaking 1–3, band bahosi va mashq.",
     coach:
-      "Coach IELTS Speaking Parts 1, 2, and 3 toward Band 6.5–8.5. In the reaction, name the relevant criterion: Lexical Resource, Grammatical Range & Accuracy, Fluency, or Coherence & Cohesion. Give a rough band note only when you can justify it, plus one upgrade that would score higher. The spoken follow-up must be a short Speaking drill.",
+      "Coach IELTS Speaking Parts 1, 2, and 3 toward Band 6.5–8.5. In the reaction, name the relevant criterion: Lexical Resource, Grammatical Range & Accuracy, Fluency, or Coherence & Cohesion. Give a rough band note only when you can justify it. The spoken line stays in Uzbek, puts the higher-band English inside quotes, and ends with one short Speaking drill question.",
   },
 };
 
@@ -96,20 +96,23 @@ Return ONLY JSON with these fields:
 - notebook (array, possibly empty)
 
 reaction_and_correction:
-- React like a lively tutor in a real conversation, then correct grammar, tense, preposition, word choice, or a pronunciation note you can infer from spelling.
-- If the phrasing sounds unnatural or awkward, explain why in plain language and give the line people actually say.
-- Give a natural English alternative. When the active mode is IELTS, or the learner asks for formal English, show the everyday line and the IELTS/formal line.
-- Add one mini coaching tip matched to the active level.
+- Write this card in lively spoken Uzbek, as a person sitting next to them, not as a textbook.
+- If the word, phrase, grammar, or accent is wrong or awkward, react directly in this spirit: "Nima deyapsan, u bunaqa deyilmaydi, boshqacha deyiladi ..." Then say why, and give the natural English.
+- Soften only the sharpness for A1, never the honesty. For a correct line, react warmly and skip the scolding.
+- When the mode is IELTS, or they ask for formal English, show the everyday line and the higher-band line.
+- Add one mini coaching tip matched to the level. If they ask for a mashq or exercise, give one short task.
+- A little everyday colloquial Uzbek is welcome (prosta, vabshe, karochi, norm, varianti), at most twice, never stacked.
 - Start the string with "SURPRISE:" when you corrected a mistake, handled an Uzbek mix-up or translation, gave a sharp IELTS tip, or reacted strongly. Otherwise start with "CALM:".
 - After that tag, write for the learner. Do not mention the tag.
 
 spoken_reply:
-- Sound like a real tutor in a live conversation, not a worksheet. One or two short spoken sentences.
-- First react naturally to what they just said, for example "Good. What about you?" or "Nice, how are you doing?"
-- If their phrasing, word choice, or the spelling suggests an awkward accent or unnatural line, say plainly why, in this spirit: "In English we don't usually say it like that. Instead we say ..."
-- Then ask exactly one follow-up question so the talk keeps moving.
-- Mostly English, so it can be spoken aloud. A few Uzbek words are welcome for A1–A2 or when the learner asked in Uzbek.
-- Do not use the SURPRISE or CALM tags here.
+- This is said aloud. Sound like a real Uzbek-speaking tutor, with Uzbek rhythm, not an English essay read by a robot.
+- Write the reaction, the reason, and the follow-up in spoken Uzbek. Put ONLY the model English word or sentence in straight double quotes, for example: Nima deyapsan, u bunaqa deyilmaydi, boshqacha deyiladi: "I went to school yesterday." Kecha nima qilding?
+- If nothing was wrong, still answer in spoken Uzbek and, when you offer English, keep that English inside quotes. Then ask exactly one follow-up.
+- Vary the wording. Do not repeat the same scolding every turn. Match their level: A1 shorter, B1–C2 looser, IELTS ends with a short Speaking question.
+- You may drop in one colloquial word when it fits a friend talking, from: prosta, vabshe, karochi, norm, varianti. Never inside the English quotes, and never more than one in this spoken line.
+- If they ask for a mashq, give one short spoken task and still end with a question.
+- No SURPRISE or CALM tags here. No markdown.
 
 notebook:
 - Each item is { "kind": "correction" | "phrase" | "word", "title": "...", "note": "..." }.
@@ -198,6 +201,9 @@ function setAvatarState(state) {
   avatarEl.dataset.state = "";
   void avatarEl.offsetWidth;
   avatarEl.dataset.state = state;
+  if (state === "idle" || state === "listening" || state === "thinking") {
+    delete avatarEl.dataset.mood;
+  }
 
   statusEl.dataset.state = state;
   statusTextEl.textContent = STATUS_TEXT[state];
@@ -557,20 +563,54 @@ function ensureVoices() {
   });
 }
 
+function looksLikeUzbek(text) {
+  return /[ʻʼ’‘]|o‘|g‘|\bo['']|\bg['']|\b(nima|deyil|deyapsan|boshqacha|qanday|rahmat|yaxshi|sen|men|bu|prosta|vabshe|karochi|norm|varianti|yo‘q|emas|qil|ayt|gapir|ha|lekin|endi|kel)\b/i.test(
+    text
+  );
+}
+
+/**
+ * Uzbek stays outside quotes so it can use an Uzbek cadence.
+ * The model English phrase stays inside quotes and is spoken clearly.
+ */
+function splitSpokenLine(text) {
+  const source = String(text || "").trim();
+  const parts = [];
+  const pattern = /"([^"]+)"|“([^”]+)”|«([^»]+)»/g;
+  let last = 0;
+  let match = pattern.exec(source);
+  while (match) {
+    const before = source.slice(last, match.index).replace(/\s+/g, " ").trim();
+    if (before) parts.push({ text: before, lang: looksLikeUzbek(before) ? "uz-UZ" : "en-US" });
+    const english = (match[1] || match[2] || match[3] || "").replace(/\s+/g, " ").trim();
+    if (english) parts.push({ text: english, lang: "en-US" });
+    last = match.index + match[0].length;
+    match = pattern.exec(source);
+  }
+  const tail = source.slice(last).replace(/\s+/g, " ").trim();
+  if (tail) parts.push({ text: tail, lang: looksLikeUzbek(tail) || parts.length ? "uz-UZ" : "en-US" });
+  if (!parts.length && source) parts.push({ text: source, lang: looksLikeUzbek(source) ? "uz-UZ" : "en-US" });
+  return parts;
+}
+
 function chooseVoice(voices, lang) {
-  const want = lang.toLowerCase();
-  const prefix = want.slice(0, 2);
+  const uzbek = lang !== "en-US";
   let best = null;
   let bestScore = -1;
   voices.forEach((voice) => {
     const voiceLang = String(voice.lang || "").toLowerCase();
-    let score = -1;
-    if (voiceLang === want) score = 50;
-    else if (voiceLang.startsWith(prefix)) score = 30;
-    else if (voiceLang.startsWith("en")) score = 8;
-    if (score < 0) return;
     const name = `${voice.name || ""} ${voice.voiceURI || ""}`.toLowerCase();
-    if (/natural|neural|premium|enhanced|google|siri/.test(name)) score += 24;
+    let score = -1;
+    if (uzbek) {
+      if (voiceLang.startsWith("uz") || /uzbek|o‘zbek|ozbek/.test(name)) score = 80;
+      else if (voiceLang.startsWith("tr")) score = 46;
+      else if (voiceLang.startsWith("az")) score = 40;
+      else if (voiceLang.startsWith("kk") || voiceLang.startsWith("ky") || voiceLang.startsWith("tk")) score = 32;
+    } else if (voiceLang === "en-us") score = 50;
+    else if (voiceLang.startsWith("en")) score = 34;
+    if (score < 0) return;
+    if (/natural|neural|premium|enhanced|google|siri|online/.test(name)) score += 24;
+    if (/robot|compact|espeak/.test(name)) score -= 18;
     if (voice.localService) score += 2;
     if (score > bestScore) {
       best = voice;
@@ -578,6 +618,16 @@ function chooseVoice(voices, lang) {
     }
   });
   return best;
+}
+
+function chunkProsody(segment, rate, lively) {
+  if (segment.lang === "en-US") {
+    return { rate: Math.max(0.82, Math.min(rate, 1) * 0.94), pitch: lively ? 1.05 : 1 };
+  }
+  return {
+    rate: Math.min(1.12, rate * (lively ? 1.05 : 1)),
+    pitch: lively ? 1.16 : 1.08,
+  };
 }
 
 function activeSpeechRate() {
@@ -603,6 +653,7 @@ function watchSpeech(token, serial, maxMs) {
   clearSpeechWatchdog();
   const startedAt = Date.now();
   let sawSpeaking = false;
+  let quietSince = 0;
   speechWatchdog = window.setInterval(() => {
     if (token !== speechToken) {
       clearSpeechWatchdog();
@@ -615,10 +666,14 @@ function watchSpeech(token, serial, maxMs) {
     } catch {
       active = false;
     }
-    if (active) sawSpeaking = true;
+    if (active) {
+      sawSpeaking = true;
+      quietSince = 0;
+    }
     const elapsed = Date.now() - startedAt;
     if (sawSpeaking && !active) {
-      finishSpeech(token, serial, "end");
+      if (!quietSince) quietSince = Date.now();
+      if (Date.now() - quietSince > 700) finishSpeech(token, serial, "end");
       return;
     }
     if (!sawSpeaking && elapsed > 1600) {
@@ -639,8 +694,9 @@ function watchSpeech(token, serial, maxMs) {
 
 async function speakReply(text, lang, serial, options) {
   const allowResume = !(options && options.replay);
+  const lively = Boolean(options && options.lively);
   const token = ++speechToken;
-  lastSpoken = { text, lang };
+  lastSpoken = { text, lang, lively };
   syncReplayButton();
   if (!speechOutputSupported()) {
     speechArmed = false;
@@ -673,59 +729,83 @@ async function speakReply(text, lang, serial, options) {
   }
 
   const rate = activeSpeechRate();
-  let utterance;
-  try {
-    utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = lang;
-    utterance.rate = rate;
-    const voice = chooseVoice(voices, lang);
-    if (voice) {
-      try {
-        utterance.voice = voice;
-        if (voice.lang) utterance.lang = voice.lang;
-      } catch {
-        utterance.lang = lang;
-      }
-    }
-    utterance.onend = () => finishSpeech(token, serial, "end");
-    utterance.onerror = (event) => {
-      if (token !== speechToken) return;
-      const interrupted = event.error === "interrupted" || event.error === "canceled";
-      if (!interrupted) showSpeechNotice(MESSAGES.ttsFailed);
-      finishSpeech(token, serial, interrupted ? "stop" : "error");
-    };
-  } catch {
+  const segments = splitSpokenLine(text);
+  if (!segments.length) {
     speechArmed = false;
     resumeAfterThisSpeech = false;
     syncStopButton();
-    showSpeechNotice(MESSAGES.ttsFailed);
     if (serial === requestSerial) setAvatarState("idle");
     return;
   }
+  if (lively) avatarEl.dataset.mood = "lively";
 
-  const maxMs = Math.min(50000, Math.max(5000, (text.length / Math.max(rate, 0.7) / 12) * 1000 + 2500));
-  const queue = () => {
+  const maxMs = Math.min(50000, Math.max(5000, (text.length / Math.max(rate, 0.7) / 11) * 1000 + 2500));
+  let index = 0;
+
+  const speakNext = () => {
     if (token !== speechToken || serial !== requestSerial) return;
+    if (index >= segments.length) {
+      finishSpeech(token, serial, "end");
+      return;
+    }
+    const segment = segments[index];
+    index += 1;
+    const prosody = chunkProsody(segment, rate, lively);
+    let utterance;
     try {
-      window.speechSynthesis.speak(utterance);
-      watchSpeech(token, serial, maxMs);
+      utterance = new SpeechSynthesisUtterance(segment.text);
+      utterance.lang = segment.lang;
+      utterance.rate = prosody.rate;
+      utterance.pitch = prosody.pitch;
+      const voice = chooseVoice(voices, segment.lang);
+      if (voice) {
+        try {
+          utterance.voice = voice;
+          if (voice.lang) utterance.lang = voice.lang;
+        } catch {
+          utterance.lang = segment.lang;
+        }
+      }
+      utterance.onend = () => {
+        if (token !== speechToken) return;
+        window.setTimeout(speakNext, 40);
+      };
+      utterance.onerror = (event) => {
+        if (token !== speechToken) return;
+        const interrupted = event.error === "interrupted" || event.error === "canceled";
+        if (!interrupted) showSpeechNotice(MESSAGES.ttsFailed);
+        finishSpeech(token, serial, interrupted ? "stop" : "error");
+      };
     } catch {
       showSpeechNotice(MESSAGES.ttsFailed);
       finishSpeech(token, serial, "error");
+      return;
     }
+
+    avatarEl.dataset.mood = segment.lang === "en-US" ? "clear" : lively ? "lively" : "uz";
+    const start = () => {
+      if (token !== speechToken || serial !== requestSerial) return;
+      try {
+        window.speechSynthesis.speak(utterance);
+      } catch {
+        showSpeechNotice(MESSAGES.ttsFailed);
+        finishSpeech(token, serial, "error");
+      }
+    };
+    if (index === 1 && (window.speechSynthesis.speaking || window.speechSynthesis.pending)) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {
+        // An empty queue can throw in a few browsers.
+      }
+      window.setTimeout(start, 60);
+      return;
+    }
+    start();
   };
-  // Chrome drops speak() if it shares a turn with cancel(). The request
-  // path already cancelled older audio in beginTurn().
-  if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
-    try {
-      window.speechSynthesis.cancel();
-    } catch {
-      // An empty queue can throw in a few browsers.
-    }
-    window.setTimeout(queue, 60);
-    return;
-  }
-  queue();
+
+  watchSpeech(token, serial, maxMs);
+  speakNext();
 }
 
 function stopSpeaking() {
@@ -744,7 +824,10 @@ function replaySpeech() {
   resumeAfterThisSpeech = false;
   stopListening({ submit: false });
   cancelSpeech();
-  void speakReply(lastSpoken.text, lastSpoken.lang, requestSerial, { replay: true });
+  void speakReply(lastSpoken.text, lastSpoken.lang, requestSerial, {
+    replay: true,
+    lively: Boolean(lastSpoken.lively),
+  });
 }
 
 function setHandsFree(enabled, persist) {
@@ -1164,11 +1247,12 @@ function presentReply(serial, text, tutor, langAtSend) {
 
   const speak = () => {
     if (serial !== requestSerial) return;
-    void speakReply(tutor.spoken, langAtSend, serial);
+    void speakReply(tutor.spoken, langAtSend, serial, { lively: tutor.surprise });
   };
 
   if (tutor.surprise) {
     setAvatarState("surprised");
+    avatarEl.dataset.mood = "lively";
     after(SURPRISE_MS, speak);
     return;
   }
