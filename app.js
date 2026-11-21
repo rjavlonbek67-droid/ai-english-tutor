@@ -124,6 +124,7 @@ const statusTextEl = document.getElementById("status-text");
 const subtitleEl = document.getElementById("subtitle");
 const modeListEl = document.getElementById("mode-list");
 const modeHintEl = document.getElementById("mode-hint");
+const stageModeEl = document.getElementById("stage-mode");
 const formEl = document.getElementById("composer");
 const inputEl = document.getElementById("user-input");
 const micBtn = document.getElementById("mic-btn");
@@ -793,6 +794,7 @@ function applyTutorMode(mode, persist) {
   if (!TUTOR_MODES[mode]) return;
   tutorMode = mode;
   modeHintEl.textContent = TUTOR_MODES[mode].hint;
+  stageModeEl.textContent = TUTOR_MODES[mode].label;
   modeListEl.querySelectorAll("[data-mode]").forEach((button) => {
     const active = button.dataset.mode === mode;
     button.classList.toggle("is-active", active);
