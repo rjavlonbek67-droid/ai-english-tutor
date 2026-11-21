@@ -2,7 +2,7 @@
  * AI Ingliz tili ustozi
  *
  * Chat goes to /api/chat. The Gemini key stays in the server environment.
- * Recent turns stay in memory. localStorage keeps the level and the notebook only.
+ * Recent turns stay in memory. localStorage keeps the level, voice prefs, and the notebook only.
  */
 
 const AVATAR_STATES = ["idle", "listening", "thinking", "speaking", "surprised"];
@@ -23,10 +23,14 @@ const EMPTY_COPY = {
 
 const NOTEBOOK_KEY = "ai-tutor-notebook";
 const MODE_KEY = "ai-tutor-level";
+const HANDS_FREE_KEY = "ai-tutor-handsfree";
+const RATE_KEY = "ai-tutor-rate";
 const MAX_TURNS = 8;
 const NOTEBOOK_LIMIT = 40;
 const SURPRISE_MS = 900;
-const VOICE_WAIT_MS = 450;
+const VOICE_WAIT_MS = 800;
+const LISTEN_LIMIT_MS = 12000;
+const HANDS_FREE_GAP_MS = 700;
 
 const MESSAGES = {
   missingServerKey: "Serverda GEMINI_API_KEY yo‘q. Render sozlamasiga kalitni qo‘ying.",
@@ -39,8 +43,8 @@ const MESSAGES = {
   noReply: "Ustoz javobi kelmadi.",
   unsupportedMic:
     "Bu brauzer ovozni matnga aylantira olmaydi. Gapni yozib yuboring. Ayrim telefonlarda mikrofon faqat Chrome da ishlaydi.",
-  micDenied: "Mikrofonga ruxsat berilmadi. Brauzer sozlamasidan ruxsatni yoqing.",
-  noSpeech: "Hech narsa eshitilmadi. Qayta gapirib ko‘ring.",
+  micDenied: "Mikrofonga ruxsat berilmadi. Telefon sozlamasidan ruxsat bering yoki gapni yozing.",
+  noSpeech: "Hech narsa eshitilmadi. Qayta gapiring yoki matn yozing.",
   noMic: "Mikrofon topilmadi. Qurilmangizni tekshiring.",
   micFailed: "Ovoz yozilmadi. Qayta urinib ko‘ring.",
   emptySpeech: "Bo‘sh ovoz keldi. Qayta gapirib ko‘ring.",
@@ -128,6 +132,9 @@ const userCardEl = document.getElementById("card-user");
 const analysisCardEl = document.getElementById("card-analysis");
 const replyCardEl = document.getElementById("card-reply");
 const stopSpeechBtn = document.getElementById("stop-speech");
+const handsFreeBtn = document.getElementById("hands-free");
+const replayBtn = document.getElementById("replay-speech");
+const rateGroupEl = document.querySelector(".rate-group");
 const speechNoticeEl = document.getElementById("speech-notice");
 const notebookListEl = document.getElementById("notebook-list");
 const notebookEmptyEl = document.getElementById("notebook-empty");
@@ -162,6 +169,15 @@ let listeningGeneration = 0;
 let liveTranscript = "";
 let speechToken = 0;
 let speechArmed = false;
+let handsFree = false;
+let speechRate = 1;
+let rateChosen = false;
+/** @type {{ text: string, lang: "uz-UZ" | "en-US" } | null} */
+let lastSpoken = null;
+let listenTimer = 0;
+let speechWatchdog = 0;
+let handsFreeTimer = 0;
+let resumeAfterThisSpeech = false;
 
 /**
  * Single place that changes the character.
@@ -199,12 +215,52 @@ function syncMicButton() {
   micBtn.setAttribute("aria-pressed", String(micActive));
   micLabelEl.textContent = micActive ? "To‘xtatish" : "Mikrofon";
   micBtn.setAttribute("aria-label", micActive ? "Yozishni to‘xtatish" : "Mikrofonni yoqish");
+  inputEl.classList.toggle("is-live", micActive);
 }
 
 function syncStopButton() {
   stopSpeechBtn.disabled = !speechArmed;
   stopSpeechBtn.classList.toggle("is-live", speechArmed);
   stopSpeechBtn.setAttribute("aria-disabled", String(!speechArmed));
+}
+
+function syncReplayButton() {
+  const ready = Boolean(lastSpoken && lastSpoken.text);
+  replayBtn.disabled = !ready;
+  replayBtn.setAttribute("aria-disabled", String(!ready));
+}
+
+function syncHandsFreeButton() {
+  handsFreeBtn.classList.toggle("is-on", handsFree);
+  handsFreeBtn.setAttribute("aria-pressed", String(handsFree));
+  handsFreeBtn.textContent = handsFree ? "Qo‘lsiz: yoniq" : "Qo‘lsiz suhbat";
+}
+
+function syncRateButtons() {
+  const active = String(speechRate);
+  rateGroupEl.querySelectorAll("[data-rate]").forEach((button) => {
+    const on = button.dataset.rate === active;
+    button.classList.toggle("is-active", on);
+    button.setAttribute("aria-checked", String(on));
+  });
+}
+
+function clearListenTimer() {
+  if (!listenTimer) return;
+  clearTimeout(listenTimer);
+  listenTimer = 0;
+}
+
+function clearSpeechWatchdog() {
+  if (!speechWatchdog) return;
+  clearInterval(speechWatchdog);
+  speechWatchdog = 0;
+}
+
+function clearHandsFreeTimer() {
+  if (!handsFreeTimer) return;
+  clearTimeout(handsFreeTimer);
+  handsFreeTimer = 0;
 }
 
 function showSpeechNotice(message) {
@@ -243,6 +299,7 @@ function stopListening(options) {
   const submit = Boolean(options && options.submit);
   if (!micActive && !recognition) return;
 
+  clearListenTimer();
   listeningGeneration += 1;
   const transcript = liveTranscript.trim();
   liveTranscript = "";
@@ -283,6 +340,7 @@ function cancelSpeech() {
   speechToken += 1;
   speechArmed = false;
   pendingSpeech = null;
+  clearSpeechWatchdog();
   syncStopButton();
   if (!speechOutputSupported()) return;
   try {
@@ -298,6 +356,8 @@ function cancelSpeech() {
  */
 function beginTurn() {
   clearSequence();
+  clearHandsFreeTimer();
+  resumeAfterThisSpeech = false;
   requestSerial += 1;
   cancelSpeech();
   stopListening({ submit: false });
@@ -376,9 +436,23 @@ function startListening() {
     stopListening({ submit: true });
   };
 
+  clearListenTimer();
+  listenTimer = window.setTimeout(() => {
+    if (generation !== listeningGeneration) return;
+    if (liveTranscript.trim()) {
+      stopListening({ submit: true });
+      return;
+    }
+    stopListening({ submit: false });
+    setAvatarState("idle");
+    setCard(userCardEl, MESSAGES.noSpeech, false);
+    showSpeechNotice(MESSAGES.noSpeech);
+  }, LISTEN_LIMIT_MS);
+
   try {
     rec.start();
   } catch {
+    clearListenTimer();
     listeningGeneration += 1;
     recognition = null;
     micActive = false;
@@ -416,27 +490,96 @@ function ensureVoices() {
 function chooseVoice(voices, lang) {
   const want = lang.toLowerCase();
   const prefix = want.slice(0, 2);
-  return (
-    voices.find((voice) => voice.lang.toLowerCase() === want) ||
-    voices.find((voice) => voice.lang.toLowerCase().startsWith(prefix)) ||
-    voices.find((voice) => voice.lang.toLowerCase().startsWith("en")) ||
-    voices[0] ||
-    null
-  );
+  let best = null;
+  let bestScore = -1;
+  voices.forEach((voice) => {
+    const voiceLang = String(voice.lang || "").toLowerCase();
+    let score = -1;
+    if (voiceLang === want) score = 50;
+    else if (voiceLang.startsWith(prefix)) score = 30;
+    else if (voiceLang.startsWith("en")) score = 8;
+    if (score < 0) return;
+    const name = `${voice.name || ""} ${voice.voiceURI || ""}`.toLowerCase();
+    if (/natural|neural|premium|enhanced|google|siri/.test(name)) score += 24;
+    if (voice.localService) score += 2;
+    if (score > bestScore) {
+      best = voice;
+      bestScore = score;
+    }
+  });
+  return best;
 }
 
-function finishSpeech(token, serial) {
+function activeSpeechRate() {
+  if (rateChosen) return speechRate;
+  return tutorMode === "beginner" ? 0.85 : 1;
+}
+
+function finishSpeech(token, serial, reason) {
   if (token !== speechToken) return;
+  speechToken += 1;
+  clearSpeechWatchdog();
   speechArmed = false;
   syncStopButton();
+  const resume = reason === "end" && resumeAfterThisSpeech && handsFree;
+  resumeAfterThisSpeech = false;
   if (serial !== requestSerial) return;
   setAvatarState("idle");
+  if (!resume) return;
+  clearHandsFreeTimer();
+  handsFreeTimer = window.setTimeout(() => {
+    handsFreeTimer = 0;
+    if (!handsFree || micActive || speechArmed) return;
+    startListening();
+  }, HANDS_FREE_GAP_MS);
 }
 
-async function speakReply(text, lang, serial) {
+function watchSpeech(token, serial, maxMs) {
+  clearSpeechWatchdog();
+  const startedAt = Date.now();
+  let sawSpeaking = false;
+  speechWatchdog = window.setInterval(() => {
+    if (token !== speechToken) {
+      clearSpeechWatchdog();
+      return;
+    }
+    let active = false;
+    try {
+      active = window.speechSynthesis.speaking || window.speechSynthesis.pending;
+      window.speechSynthesis.resume();
+    } catch {
+      active = false;
+    }
+    if (active) sawSpeaking = true;
+    const elapsed = Date.now() - startedAt;
+    if (sawSpeaking && !active) {
+      finishSpeech(token, serial, "end");
+      return;
+    }
+    if (!sawSpeaking && elapsed > 1600) {
+      showSpeechNotice(MESSAGES.ttsFailed);
+      finishSpeech(token, serial, "error");
+      return;
+    }
+    if (elapsed > maxMs) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {
+        // The queue may already be empty.
+      }
+      finishSpeech(token, serial, sawSpeaking ? "end" : "error");
+    }
+  }, 300);
+}
+
+async function speakReply(text, lang, serial, options) {
+  const allowResume = !(options && options.replay);
   const token = ++speechToken;
+  lastSpoken = { text, lang };
+  syncReplayButton();
   if (!speechOutputSupported()) {
     speechArmed = false;
+    resumeAfterThisSpeech = false;
     syncStopButton();
     showSpeechNotice(MESSAGES.noTts);
     if (serial === requestSerial) setAvatarState("idle");
@@ -445,6 +588,7 @@ async function speakReply(text, lang, serial) {
 
   if (serial !== requestSerial) return;
   speechArmed = true;
+  resumeAfterThisSpeech = allowResume && handsFree;
   syncStopButton();
   setAvatarState("speaking");
   const voices = await ensureVoices();
@@ -452,16 +596,19 @@ async function speakReply(text, lang, serial) {
 
   if (!voices.length) {
     speechArmed = false;
+    resumeAfterThisSpeech = false;
     syncStopButton();
     showSpeechNotice(MESSAGES.noVoice);
     setAvatarState("idle");
     return;
   }
 
+  const rate = activeSpeechRate();
   let utterance;
   try {
     utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = lang;
+    utterance.rate = rate;
     const voice = chooseVoice(voices, lang);
     if (voice) {
       try {
@@ -471,29 +618,31 @@ async function speakReply(text, lang, serial) {
         utterance.lang = lang;
       }
     }
-    utterance.rate = 1;
-    utterance.onend = () => finishSpeech(token, serial);
+    utterance.onend = () => finishSpeech(token, serial, "end");
     utterance.onerror = (event) => {
       if (token !== speechToken) return;
       const interrupted = event.error === "interrupted" || event.error === "canceled";
       if (!interrupted) showSpeechNotice(MESSAGES.ttsFailed);
-      finishSpeech(token, serial);
+      finishSpeech(token, serial, interrupted ? "stop" : "error");
     };
   } catch {
     speechArmed = false;
+    resumeAfterThisSpeech = false;
     syncStopButton();
     showSpeechNotice(MESSAGES.ttsFailed);
     if (serial === requestSerial) setAvatarState("idle");
     return;
   }
 
+  const maxMs = Math.min(50000, Math.max(5000, (text.length / Math.max(rate, 0.7) / 12) * 1000 + 2500));
   const queue = () => {
     if (token !== speechToken || serial !== requestSerial) return;
     try {
       window.speechSynthesis.speak(utterance);
+      watchSpeech(token, serial, maxMs);
     } catch {
       showSpeechNotice(MESSAGES.ttsFailed);
-      finishSpeech(token, serial);
+      finishSpeech(token, serial, "error");
     }
   };
   // Chrome drops speak() if it shares a turn with cancel(). The request
@@ -513,8 +662,71 @@ async function speakReply(text, lang, serial) {
 function stopSpeaking() {
   if (!speechArmed && !(speechOutputSupported() && window.speechSynthesis.speaking)) return;
   clearSequence();
+  clearHandsFreeTimer();
+  resumeAfterThisSpeech = false;
   cancelSpeech();
   setAvatarState("idle");
+}
+
+function replaySpeech() {
+  if (!lastSpoken) return;
+  unlockSpeech();
+  clearHandsFreeTimer();
+  resumeAfterThisSpeech = false;
+  stopListening({ submit: false });
+  cancelSpeech();
+  void speakReply(lastSpoken.text, lastSpoken.lang, requestSerial, { replay: true });
+}
+
+function setHandsFree(enabled, persist) {
+  handsFree = Boolean(enabled);
+  if (!handsFree) {
+    clearHandsFreeTimer();
+    resumeAfterThisSpeech = false;
+  }
+  syncHandsFreeButton();
+  if (!persist) return;
+  try {
+    localStorage.setItem(HANDS_FREE_KEY, handsFree ? "1" : "0");
+  } catch {
+    // The toggle still applies until reload.
+  }
+}
+
+function setSpeechRate(rate, persist) {
+  const next = Number(rate);
+  if (next !== 0.85 && next !== 1 && next !== 1.15) return;
+  speechRate = next;
+  rateChosen = true;
+  syncRateButtons();
+  if (!persist) return;
+  try {
+    localStorage.setItem(RATE_KEY, String(next));
+  } catch {
+    // The chosen speed still applies until reload.
+  }
+}
+
+function loadVoicePrefs() {
+  let savedRate = "";
+  let savedHands = "";
+  try {
+    savedRate = localStorage.getItem(RATE_KEY) || "";
+    savedHands = localStorage.getItem(HANDS_FREE_KEY) || "";
+  } catch {
+    savedRate = "";
+    savedHands = "";
+  }
+  if (savedRate === "0.85" || savedRate === "1" || savedRate === "1.15") {
+    speechRate = Number(savedRate);
+    rateChosen = true;
+  } else {
+    speechRate = tutorMode === "beginner" ? 0.85 : 1;
+    rateChosen = false;
+  }
+  handsFree = savedHands === "1";
+  syncRateButtons();
+  syncHandsFreeButton();
 }
 
 function tutorError(userMessage) {
@@ -963,14 +1175,23 @@ function init() {
   langBtn.setAttribute("aria-label", "Til: uz-UZ. en-US ga o‘tish");
 
   applyTutorMode(readSavedMode(), false);
+  loadVoicePrefs();
   setAvatarState("idle");
   syncStopButton();
+  syncReplayButton();
   renderNotebook();
   micBtn.setAttribute("aria-label", "Mikrofonni yoqish");
   if (speechOutputSupported()) window.speechSynthesis.getVoices();
   void detectChatMode();
 
   modeListEl.addEventListener("click", handleModeClick);
+  handsFreeBtn.addEventListener("click", () => setHandsFree(!handsFree, true));
+  rateGroupEl.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-rate]");
+    if (!button) return;
+    setSpeechRate(button.dataset.rate, true);
+  });
+  replayBtn.addEventListener("click", replaySpeech);
   formEl.addEventListener("submit", handleSubmit);
   inputEl.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" || event.shiftKey) return;

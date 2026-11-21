@@ -20,7 +20,7 @@
 
         <!-- Speech language for later voice I/O. Labels on the page stay in Uzbek. -->
         <button id="lang-toggle" class="lang-toggle" type="button" aria-pressed="false">
-          <span class="lang-kicker">Til</span>
+          <span class="lang-kicker">Tanish</span>
           <span id="lang-value">uz-UZ</span>
         </button>
       </header>
@@ -79,6 +79,18 @@
             </button>
           </div>
         </section>
+
+        <div class="voice-bar" aria-label="Ovoz boshqaruvi">
+          <button id="hands-free" class="voice-toggle" type="button" aria-pressed="false">
+            Qo‘lsiz suhbat
+          </button>
+          <div class="rate-group" role="radiogroup" aria-label="Ovoz tezligi">
+            <button type="button" role="radio" data-rate="0.85" aria-checked="false">Sekin</button>
+            <button type="button" role="radio" data-rate="1" aria-checked="true">Oddiy</button>
+            <button type="button" role="radio" data-rate="1.15" aria-checked="false">Tez</button>
+          </div>
+          <button id="replay-speech" class="replay-speech" type="button" disabled>Qayta eshitish</button>
+        </div>
 
         <p id="speech-notice" class="speech-notice" aria-live="polite"></p>
 

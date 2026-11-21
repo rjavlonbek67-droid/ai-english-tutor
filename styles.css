@@ -416,6 +416,51 @@ h1 {
   cursor: pointer;
 }
 
+.voice-bar {
+  width: min(720px, 100%);
+  margin: 0 auto 12px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.voice-toggle,
+.replay-speech,
+.rate-group button {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 999px;
+  min-height: 44px;
+  padding: 8px 14px;
+  font-weight: 740;
+  box-shadow: var(--shadow);
+}
+
+.voice-toggle.is-on,
+.rate-group button.is-active {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+
+.rate-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.replay-speech:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.composer input.is-live {
+  border-color: rgba(13, 122, 98, 0.55);
+  box-shadow: 0 0 0 4px rgba(93, 222, 196, 0.25);
+}
+
 .speech-notice {
   width: min(720px, 100%);
   margin: 0 auto 12px;
@@ -614,7 +659,7 @@ h1 {
   width: 40px;
   height: 16px;
   border-radius: 20px 20px 24px 24px;
-  animation: talk 0.28s ease-in-out infinite alternate;
+  animation: talk 0.34s ease-in-out infinite alternate;
 }
 
 .status[data-state="speaking"] {
@@ -1023,10 +1068,10 @@ h1 {
 
 @keyframes speak-bob {
   from {
-    transform: translateY(0);
+    transform: translateY(0) rotate(-0.7deg);
   }
   to {
-    transform: translateY(-3px);
+    transform: translateY(-4px) rotate(0.8deg);
   }
 }
 
@@ -1105,6 +1150,11 @@ h1 {
 
   .mode-list button {
     flex: 1 1 calc(50% - 8px);
+  }
+
+  .voice-toggle,
+  .replay-speech {
+    flex: 1 1 140px;
   }
 
   .card {
