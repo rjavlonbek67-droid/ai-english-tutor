@@ -31,7 +31,7 @@ const NOTEBOOK_LIMIT = 40;
 const SURPRISE_MS = 900;
 const VOICE_WAIT_MS = 800;
 const LISTEN_LIMIT_MS = 12000;
-const HANDS_FREE_GAP_MS = 700;
+const HANDS_FREE_GAP_MS = 900;
 
 const MESSAGES = {
   missingServerKey: "Serverda GEMINI_API_KEY yo‘q. Render sozlamasiga kalitni qo‘ying.",
@@ -73,7 +73,7 @@ const TUTOR_MODES = {
     label: "Mukammal / Advanced (C1)",
     hint: "Nozik ifoda va aniqroq lug‘at.",
     coach:
-      "Coach nuanced, precise English. Replace a vague word with a sharper one. Comment on tone, collocation, and register. Keep praise specific and the upgrade small enough to use immediately.",
+      "Coach nuanced C1–C2 English. Replace a vague word with a sharper one. Comment on tone, collocation, register, and natural stress. Keep praise specific and the upgrade small enough to use immediately.",
   },
   ielts: {
     label: "IELTS Tayyorgarlik (Band 6.5–8.5+)",
@@ -96,15 +96,19 @@ Return ONLY JSON with these fields:
 - notebook (array, possibly empty)
 
 reaction_and_correction:
-- React like a lively tutor, then correct grammar, tense, preposition, word choice, or a pronunciation note you can infer from spelling.
+- React like a lively tutor in a real conversation, then correct grammar, tense, preposition, word choice, or a pronunciation note you can infer from spelling.
+- If the phrasing sounds unnatural or awkward, explain why in plain language and give the line people actually say.
 - Give a natural English alternative. When the active mode is IELTS, or the learner asks for formal English, show the everyday line and the IELTS/formal line.
 - Add one mini coaching tip matched to the active level.
 - Start the string with "SURPRISE:" when you corrected a mistake, handled an Uzbek mix-up or translation, gave a sharp IELTS tip, or reacted strongly. Otherwise start with "CALM:".
 - After that tag, write for the learner. Do not mention the tag.
 
 spoken_reply:
-- A short, natural line a tutor would say out loud, plus exactly one targeted practice prompt or follow-up question that moves the learner forward in the active mode.
-- Mostly English, so it can be spoken later. A few Uzbek words are welcome for A1–A2 or when the learner asked in Uzbek.
+- Sound like a real tutor in a live conversation, not a worksheet. One or two short spoken sentences.
+- First react naturally to what they just said, for example "Good. What about you?" or "Nice, how are you doing?"
+- If their phrasing, word choice, or the spelling suggests an awkward accent or unnatural line, say plainly why, in this spirit: "In English we don't usually say it like that. Instead we say ..."
+- Then ask exactly one follow-up question so the talk keeps moving.
+- Mostly English, so it can be spoken aloud. A few Uzbek words are welcome for A1–A2 or when the learner asked in Uzbek.
 - Do not use the SURPRISE or CALM tags here.
 
 notebook:
@@ -172,7 +176,8 @@ let listeningGeneration = 0;
 let liveTranscript = "";
 let speechToken = 0;
 let speechArmed = false;
-let handsFree = false;
+let handsFree = true;
+let quietStrikes = 0;
 let speechRate = 1;
 let rateChosen = false;
 /** @type {{ text: string, lang: "uz-UZ" | "en-US" } | null} */
@@ -241,7 +246,11 @@ function syncReplayButton() {
 function syncHandsFreeButton() {
   handsFreeBtn.classList.toggle("is-on", handsFree);
   handsFreeBtn.setAttribute("aria-pressed", String(handsFree));
-  handsFreeBtn.textContent = handsFree ? "Qo‘lsiz: yoniq" : "Qo‘lsiz suhbat";
+  handsFreeBtn.textContent = handsFree ? "Jimjit" : "Jonli suhbat";
+  handsFreeBtn.setAttribute(
+    "aria-label",
+    handsFree ? "Jonli suhbatni to‘xtatish" : "Jonli suhbatni yoqish"
+  );
 }
 
 function syncRateButtons() {
@@ -332,14 +341,28 @@ function stopListening(options) {
   }
 
   if (!submit) return;
-  if (!transcript) {
+  if (!transcript || looksLikeEcho(transcript)) {
+    const echoed = Boolean(transcript);
+    if (handsFree && quietStrikes < 1) {
+      quietStrikes += 1;
+      setAvatarState("idle");
+      const note = echoed
+        ? "O‘z javobim eshitildi. Yana gapiring."
+        : "Jim. Yana gapiring yoki yozing.";
+      setSubtitle(note, false);
+      showSpeechNotice(note);
+      scheduleLiveListen();
+      return;
+    }
+    quietStrikes = 0;
     setAvatarState("idle");
-    setCard(userCardEl, MESSAGES.emptySpeech, false);
-    setSubtitle(MESSAGES.emptySpeech, false);
-    showSpeechNotice(MESSAGES.emptySpeech);
+    setCard(userCardEl, echoed ? "O‘z javobim eshitildi." : MESSAGES.emptySpeech, false);
+    setSubtitle(echoed ? "O‘z javobim eshitildi. Yana gapiring." : MESSAGES.emptySpeech, false);
+    showSpeechNotice(echoed ? "O‘z javobim eshitildi. Yana gapiring." : MESSAGES.emptySpeech);
     return;
   }
 
+  quietStrikes = 0;
   clearSpeechNotice();
   inputEl.value = transcript;
   formEl.requestSubmit();
@@ -386,7 +409,39 @@ function recognitionErrorMessage(code) {
   return MESSAGES.micFailed;
 }
 
+function scheduleLiveListen() {
+  clearHandsFreeTimer();
+  if (!handsFree || micActive || speechArmed) return;
+  handsFreeTimer = window.setTimeout(() => {
+    handsFreeTimer = 0;
+    if (!handsFree || micActive || speechArmed) return;
+    startListening();
+  }, HANDS_FREE_GAP_MS);
+}
+
+function normalizeHeard(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9‘'’\u0400-\u04ff\s]/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function looksLikeEcho(text) {
+  if (!lastSpoken) return false;
+  const heard = normalizeHeard(text);
+  const spoken = normalizeHeard(lastSpoken.text);
+  if (heard.length < 12 || spoken.length < 12) return false;
+  if (spoken.includes(heard) || heard.includes(spoken)) return true;
+  const heardWords = heard.split(" ").filter((word) => word.length > 2);
+  const spokenWords = new Set(spoken.split(" "));
+  if (heardWords.length < 4) return false;
+  const hits = heardWords.filter((word) => spokenWords.has(word)).length;
+  return hits / heardWords.length > 0.72;
+}
+
 function startListening() {
+  if (speechArmed) return;
   unlockSpeech();
   const Recognition = getRecognitionCtor();
   if (!Recognition) {
@@ -435,9 +490,17 @@ function startListening() {
 
   rec.onerror = (event) => {
     if (generation !== listeningGeneration) return;
+    if (event.error === "aborted") return;
+    if (event.error === "no-speech") {
+      stopListening({ submit: true });
+      return;
+    }
     const message = recognitionErrorMessage(event.error);
     if (!message) return;
     stopListening({ submit: false });
+    if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+      setHandsFree(false, true);
+    }
     setAvatarState("idle");
     setCard(userCardEl, message, false);
     setSubtitle(message, false);
@@ -452,15 +515,7 @@ function startListening() {
   clearListenTimer();
   listenTimer = window.setTimeout(() => {
     if (generation !== listeningGeneration) return;
-    if (liveTranscript.trim()) {
-      stopListening({ submit: true });
-      return;
-    }
-    stopListening({ submit: false });
-    setAvatarState("idle");
-    setCard(userCardEl, MESSAGES.noSpeech, false);
-    setSubtitle(MESSAGES.noSpeech, false);
-    showSpeechNotice(MESSAGES.noSpeech);
+    stopListening({ submit: true });
   }, LISTEN_LIMIT_MS);
 
   try {
@@ -541,12 +596,7 @@ function finishSpeech(token, serial, reason) {
   if (serial !== requestSerial) return;
   setAvatarState("idle");
   if (!resume) return;
-  clearHandsFreeTimer();
-  handsFreeTimer = window.setTimeout(() => {
-    handsFreeTimer = 0;
-    if (!handsFree || micActive || speechArmed) return;
-    startListening();
-  }, HANDS_FREE_GAP_MS);
+  scheduleLiveListen();
 }
 
 function watchSpeech(token, serial, maxMs) {
@@ -597,7 +647,10 @@ async function speakReply(text, lang, serial, options) {
     resumeAfterThisSpeech = false;
     syncStopButton();
     showSpeechNotice(MESSAGES.noTts);
-    if (serial === requestSerial) setAvatarState("idle");
+    if (serial === requestSerial) {
+      setAvatarState("idle");
+      if (handsFree) scheduleLiveListen();
+    }
     return;
   }
 
@@ -615,6 +668,7 @@ async function speakReply(text, lang, serial, options) {
     syncStopButton();
     showSpeechNotice(MESSAGES.noVoice);
     setAvatarState("idle");
+    if (handsFree) scheduleLiveListen();
     return;
   }
 
@@ -739,7 +793,7 @@ function loadVoicePrefs() {
     speechRate = tutorMode === "beginner" ? 0.85 : 1;
     rateChosen = false;
   }
-  handsFree = savedHands === "1";
+  handsFree = savedHands !== "0";
   syncRateButtons();
   syncHandsFreeButton();
 }
