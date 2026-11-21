@@ -37,7 +37,7 @@ const MESSAGES = {
   missingServerKey: "Serverda GEMINI_API_KEY yo‘q. Render sozlamasiga kalitni qo‘ying.",
   offline: "Ustoz serveri topilmadi. Sahifani server manzili orqali oching.",
   badKey: "API kaliti yaroqsiz yoki muddati o‘tgan. Serverdagi kalitni tekshiring.",
-  quota: "So‘rovlar chegarasi to‘ldi. Biroz kuting va qayta yuboring.",
+  quota: "Hoy, prosta, hozir navbat to‘lib qoldi. Bir zum kutib, qayta yubor.",
   network: "Tarmoq xatosi. Internetni tekshirib, qayta urinib ko‘ring.",
   server: "Gemini serveri hozir javob bermadi. Birozdan so‘ng qayta urinib ko‘ring.",
   malformed: "Ustoz javobi noto‘g‘ri formatda keldi. Qayta yuborib ko‘ring.",
@@ -67,7 +67,7 @@ const TUTOR_MODES = {
     label: "Jonli Muloqot (B1–B2)",
     hint: "Kundalik nutq, idiomalar va phrasal verb.",
     coach:
-      "Coach natural everyday speaking. Offer one idiom or phrasal verb inside quotes when it fits. The talk around it is lively spoken Uzbek, like a friend, then one follow-up question.",
+      "This is Jonli suhbat: sit across from them and answer like a person, not a worksheet. If the English is off, say it straight in spoken Uzbek — Nima deyapsan, u bunaqa deyilmaydi, boshqacha deyiladi — then put the natural English in quotes and ask the next question immediately. One colloquial word is enough.",
   },
   advanced: {
     label: "Mukammal / Advanced (C1)",
@@ -106,7 +106,7 @@ reaction_and_correction:
 - After that tag, write for the learner. Do not mention the tag.
 
 spoken_reply:
-- This is said aloud. Sound like a real Uzbek-speaking tutor, with Uzbek rhythm, not an English essay read by a robot.
+- This is said aloud in Jonli suhbat. Sound like a person across the table, with Uzbek rhythm, not an English essay read by a robot.
 - Write the reaction, the reason, and the follow-up in spoken Uzbek. Put ONLY the model English word or sentence in straight double quotes, for example: Nima deyapsan, u bunaqa deyilmaydi, boshqacha deyiladi: "I went to school yesterday." Kecha nima qilding?
 - If nothing was wrong, still answer in spoken Uzbek and, when you offer English, keep that English inside quotes. Then ask exactly one follow-up.
 - Vary the wording. Do not repeat the same scolding every turn. Match their level: A1 shorter, B1–C2 looser, IELTS ends with a short Speaking question.
@@ -693,7 +693,7 @@ function watchSpeech(token, serial, maxMs) {
 }
 
 async function speakReply(text, lang, serial, options) {
-  const allowResume = !(options && options.replay);
+  const allowResume = !(options && (options.replay || options.hold));
   const lively = Boolean(options && options.lively);
   const token = ++speechToken;
   lastSpoken = { text, lang, lively };
@@ -996,20 +996,75 @@ function buildTutorRequestBody(text, lang) {
   };
 }
 
-async function mapHttpError(response) {
-  const status = response.status;
-  let code = "";
-  try {
-    code = (await response.json())?.error || "";
-  } catch {
-    code = "";
-  }
+function mapHttpError(status, body) {
+  const code = typeof body?.error === "string" ? body.error : "";
   if (status === 503 && code === "missing-server-key") return tutorError(MESSAGES.missingServerKey);
   if (code === "invalid-body") return tutorError(MESSAGES.malformed);
   if (status === 400 || status === 401 || status === 403) return tutorError(MESSAGES.badKey);
-  if (status === 429) return tutorError(MESSAGES.quota);
+  if (status === 429 || code === "quota") return tutorError(MESSAGES.quota);
   if (status >= 500 || status === 404 || status === 408) return tutorError(MESSAGES.server);
   return tutorError(MESSAGES.server);
+}
+
+function isQuotaResponse(status, body) {
+  if (status === 429 || body?.error === "quota") return true;
+  const detail = body?.error && typeof body.error === "object" ? JSON.stringify(body.error) : "";
+  return /resource_exhausted|quota|rate.?limit/i.test(detail);
+}
+
+const QUOTA_LINES = [
+  {
+    spoken: "Hoy, prosta, hozir navbat to‘lib qoldi. Bir zum kut, keyin shu gapingni qayta ayt.",
+    reaction: "Vabshe, bu seniki emas. Hozir joy to‘lib qoldi, gaping saqlangan. Birozdan yana yubor.",
+  },
+  {
+    spoken: "Karochi, hozir o‘zim navbatdaman. Gaping yo‘qolmadi, bir zumdan qayta yubor.",
+    reaction: "Prosta, chegara to‘ldi. Matn joyida turibdi, qayta yuborsang bo‘ldi.",
+  },
+  {
+    spoken: "Norm gapirding, lekin hozir joy yo‘q. Bir daqiqa dam olib, yana yoz yoki gapir.",
+    reaction: "Hozir server band. Xato seniki emas, varianti shu: biroz kutib, yana yuboramiz.",
+  },
+];
+let quotaTurn = 0;
+
+function quotaTutorReply() {
+  const line = QUOTA_LINES[quotaTurn % QUOTA_LINES.length];
+  quotaTurn += 1;
+  return {
+    surprise: false,
+    holdMic: true,
+    reaction: line.reaction,
+    spoken: line.spoken,
+    notebook: [],
+    model: JSON.stringify({
+      reaction_and_correction: line.reaction,
+      spoken_reply: line.spoken,
+      notebook: [],
+    }),
+  };
+}
+
+function waitForRetry(ms, signal) {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      const aborted = new Error("aborted");
+      aborted.name = "AbortError";
+      reject(aborted);
+      return;
+    }
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      const aborted = new Error("aborted");
+      aborted.name = "AbortError";
+      reject(aborted);
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
 }
 
 function extractCandidateText(payload) {
@@ -1185,8 +1240,9 @@ function clearNotebook() {
 
 /**
  * @param {{ key: string, text: string, lang: "uz-UZ" | "en-US", signal: AbortSignal }} request
+ * @param {boolean} [allowClientRetry]
  */
-async function requestTutorReply(request) {
+async function requestTutorReply(request, allowClientRetry = true) {
   let response;
   try {
     response = await fetch("/api/chat", {
@@ -1203,7 +1259,22 @@ async function requestTutorReply(request) {
     throw tutorError(MESSAGES.network);
   }
 
-  if (!response.ok) throw await mapHttpError(response);
+  if (!response.ok) {
+    let body = {};
+    try {
+      body = await response.json();
+    } catch {
+      body = {};
+    }
+    if (isQuotaResponse(response.status, body)) {
+      if (allowClientRetry && body?.retried !== true) {
+        await waitForRetry(800, request.signal);
+        return requestTutorReply(request, false);
+      }
+      return quotaTutorReply();
+    }
+    throw mapHttpError(response.status, body);
+  }
 
   let payload;
   try {
@@ -1238,8 +1309,12 @@ function presentReply(serial, text, tutor, langAtSend) {
   setCard(analysisCardEl, tutor.reaction, false);
   setCard(replyCardEl, tutor.spoken, false);
   setSubtitle(tutor.spoken, false);
-  rememberTurn(text, tutor.model);
-  saveNotebookEntries(tutor.notebook);
+  if (tutor.holdMic) {
+    if (text) inputEl.value = text;
+  } else {
+    rememberTurn(text, tutor.model);
+    saveNotebookEntries(tutor.notebook);
+  }
   pendingSpeech = { text: tutor.spoken, lang: langAtSend };
   clearSpeechNotice();
   speechArmed = true;
@@ -1247,7 +1322,10 @@ function presentReply(serial, text, tutor, langAtSend) {
 
   const speak = () => {
     if (serial !== requestSerial) return;
-    void speakReply(tutor.spoken, langAtSend, serial, { lively: tutor.surprise });
+    void speakReply(tutor.spoken, langAtSend, serial, {
+      lively: tutor.surprise,
+      hold: Boolean(tutor.holdMic),
+    });
   };
 
   if (tutor.surprise) {
