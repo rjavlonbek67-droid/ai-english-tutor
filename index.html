@@ -17,15 +17,9 @@
             <h1>AI Ingliz tili ustozi</h1>
           </div>
         </div>
-
-        <!-- Speech language for later voice I/O. Labels on the page stay in Uzbek. -->
-        <button id="lang-toggle" class="lang-toggle" type="button" aria-pressed="false">
-          <span class="lang-kicker">Tanish</span>
-          <span id="lang-value">uz-UZ</span>
-        </button>
       </header>
 
-      <main>
+      <main class="layout">
         <section class="stage" aria-label="Ustoz qiyofasi">
           <div class="stage-glow" aria-hidden="true"></div>
 
@@ -69,6 +63,8 @@
             </div>
           </div>
 
+          <p id="subtitle" class="subtitle is-empty">Salom. Gapiring yoki yozing.</p>
+
           <div class="stage-foot">
             <p id="status" class="status" data-state="idle" role="status" aria-live="polite">
               <span class="status-bars" aria-hidden="true"><i></i><i></i><i></i></span>
@@ -79,6 +75,18 @@
             </button>
           </div>
         </section>
+
+        <section class="conversation" aria-label="Suhbat">
+          <div class="conversation-head">
+            <div>
+              <h2>Suhbat</h2>
+              <p>Gapiring, yozing va oxirgi almashinuvni shu yerda ko‘ring.</p>
+            </div>
+            <button id="lang-toggle" class="lang-toggle" type="button" aria-pressed="false">
+              <span class="lang-kicker">Tanish</span>
+              <span id="lang-value">uz-UZ</span>
+            </button>
+          </div>
 
         <div class="voice-bar" aria-label="Ovoz boshqaruvi">
           <button id="hands-free" class="voice-toggle" type="button" aria-pressed="false">
@@ -132,15 +140,15 @@
         <section class="cards" aria-live="polite">
           <article class="card">
             <h2>Sizning gapingiz</h2>
-            <p id="card-user" class="card-body is-empty">Hali xabar yo‘q.</p>
+            <p id="card-user" class="card-body is-empty">Hali gapirmadingiz.</p>
           </article>
           <article class="card">
-            <h2>Reaksiya, xato va IELTS</h2>
-            <p id="card-analysis" class="card-body is-empty">Tahlil va maslahat shu yerda chiqadi.</p>
+            <h2>Tahlil</h2>
+            <p id="card-analysis" class="card-body is-empty">Maslahat shu yerda chiqadi.</p>
           </article>
           <article class="card card-reply">
             <h2>Ustoz javobi</h2>
-            <p id="card-reply" class="card-body is-empty">Ustoz javobi shu yerda chiqadi.</p>
+            <p id="card-reply" class="card-body is-empty">Javob shu yerda chiqadi.</p>
           </article>
         </section>
 
@@ -151,6 +159,7 @@
           </div>
           <p id="notebook-empty" class="notebook-empty">Hali saqlangan xato yoki so‘z yo‘q.</p>
           <ul id="notebook-list" class="notebook-list"></ul>
+        </section>
         </section>
       </main>
     </div>

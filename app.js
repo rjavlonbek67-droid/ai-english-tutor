@@ -16,9 +16,10 @@ const STATUS_TEXT = {
 };
 
 const EMPTY_COPY = {
-  user: "Hali xabar yo‘q.",
-  analysis: "Tahlil va maslahat shu yerda chiqadi.",
-  reply: "Ustoz javobi shu yerda chiqadi.",
+  user: "Hali gapirmadingiz.",
+  analysis: "Maslahat shu yerda chiqadi.",
+  reply: "Javob shu yerda chiqadi.",
+  subtitle: "Salom. Gapiring yoki yozing.",
 };
 
 const NOTEBOOK_KEY = "ai-tutor-notebook";
@@ -120,6 +121,7 @@ Keep every field concise. No markdown.`;
 const avatarEl = document.getElementById("avatar");
 const statusEl = document.getElementById("status");
 const statusTextEl = document.getElementById("status-text");
+const subtitleEl = document.getElementById("subtitle");
 const modeListEl = document.getElementById("mode-list");
 const modeHintEl = document.getElementById("mode-hint");
 const formEl = document.getElementById("composer");
@@ -208,6 +210,11 @@ function after(ms, fn) {
 function setCard(el, text, isEmpty) {
   el.textContent = text;
   el.classList.toggle("is-empty", Boolean(isEmpty));
+}
+
+function setSubtitle(text, isEmpty) {
+  subtitleEl.textContent = text;
+  subtitleEl.classList.toggle("is-empty", Boolean(isEmpty));
 }
 
 function syncMicButton() {
@@ -327,6 +334,7 @@ function stopListening(options) {
   if (!transcript) {
     setAvatarState("idle");
     setCard(userCardEl, MESSAGES.emptySpeech, false);
+    setSubtitle(MESSAGES.emptySpeech, false);
     showSpeechNotice(MESSAGES.emptySpeech);
     return;
   }
@@ -384,6 +392,7 @@ function startListening() {
     beginTurn();
     setAvatarState("idle");
     setCard(userCardEl, MESSAGES.unsupportedMic, false);
+    setSubtitle(MESSAGES.unsupportedMic, false);
     showSpeechNotice(MESSAGES.unsupportedMic);
     return;
   }
@@ -397,6 +406,7 @@ function startListening() {
   syncMicButton();
   setAvatarState("listening");
   setCard(userCardEl, MESSAGES.listeningHint, false);
+  setSubtitle(MESSAGES.listeningHint, false);
 
   const rec = new Recognition();
   recognition = rec;
@@ -418,6 +428,7 @@ function startListening() {
     if (!liveTranscript) return;
     inputEl.value = liveTranscript;
     setCard(userCardEl, liveTranscript, false);
+    setSubtitle(liveTranscript, false);
     statusTextEl.textContent = STATUS_TEXT.listening;
   };
 
@@ -428,6 +439,7 @@ function startListening() {
     stopListening({ submit: false });
     setAvatarState("idle");
     setCard(userCardEl, message, false);
+    setSubtitle(message, false);
     showSpeechNotice(message);
   };
 
@@ -446,6 +458,7 @@ function startListening() {
     stopListening({ submit: false });
     setAvatarState("idle");
     setCard(userCardEl, MESSAGES.noSpeech, false);
+    setSubtitle(MESSAGES.noSpeech, false);
     showSpeechNotice(MESSAGES.noSpeech);
   }, LISTEN_LIMIT_MS);
 
@@ -459,6 +472,7 @@ function startListening() {
     syncMicButton();
     setAvatarState("idle");
     setCard(userCardEl, MESSAGES.micFailed, false);
+    setSubtitle(MESSAGES.micFailed, false);
     showSpeechNotice(MESSAGES.micFailed);
   }
 }
@@ -1075,6 +1089,7 @@ function showFailure(serial, userMessage, restoreText) {
   if (serial !== requestSerial) return;
   setCard(analysisCardEl, userMessage, false);
   setCard(replyCardEl, MESSAGES.noReply, false);
+  setSubtitle(userMessage, false);
   if (restoreText) inputEl.value = restoreText;
   setAvatarState("idle");
 }
@@ -1083,6 +1098,7 @@ function presentReply(serial, text, tutor, langAtSend) {
   if (serial !== requestSerial) return;
   setCard(analysisCardEl, tutor.reaction, false);
   setCard(replyCardEl, tutor.spoken, false);
+  setSubtitle(tutor.spoken, false);
   rememberTurn(text, tutor.model);
   saveNotebookEntries(tutor.notebook);
   pendingSpeech = { text: tutor.spoken, lang: langAtSend };
@@ -1112,6 +1128,7 @@ async function handleSubmit(event) {
   if (!text) {
     setAvatarState("surprised");
     setCard(userCardEl, "Iltimos, avval matn yozing.", false);
+    setSubtitle("Iltimos, avval matn yozing.", false);
     setCard(analysisCardEl, EMPTY_COPY.analysis, true);
     setCard(replyCardEl, EMPTY_COPY.reply, true);
     after(SURPRISE_MS, () => {
@@ -1129,6 +1146,7 @@ async function handleSubmit(event) {
     setCard(userCardEl, text, false);
     setCard(analysisCardEl, MESSAGES.offline, false);
     setCard(replyCardEl, MESSAGES.noReply, false);
+    setSubtitle(MESSAGES.offline, false);
     setAvatarState("surprised");
     after(SURPRISE_MS, () => {
       if (serial !== requestSerial) return;
@@ -1139,8 +1157,9 @@ async function handleSubmit(event) {
   }
 
   setCard(userCardEl, text, false);
-  setCard(analysisCardEl, "…", false);
-  setCard(replyCardEl, "…", false);
+  setCard(analysisCardEl, "Bir zum…", false);
+  setCard(replyCardEl, "Bir zum…", false);
+  setSubtitle("Bir zum…", false);
   setAvatarState("thinking");
   inputEl.value = "";
 
