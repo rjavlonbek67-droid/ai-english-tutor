@@ -3,6 +3,7 @@ services:
     name: ai-ingliz-tili-ustoz
     runtime: node
     plan: free
+    branch: main
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /api/health
