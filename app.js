@@ -95,7 +95,7 @@ Stay concise enough to hear in one calm breath. spoken_reply is usually one flow
 
 Your own English is always a full natural grammatical sentence. Never speak broken bot English as yourself, such as I am go or thanks or menks. You may repeat a broken phrase only when it is the learner's exact mistake, and the next sentence must be the complete correct one, for example I am going to school. or Thank you.
 
-The words inside reaction_and_correction and spoken_reply may contain only letters, spaces, and periods. A period is a real full stop after a complete breath, not a pause after a short fragment. Most replies need one period at the end. Connect clauses with va, chunki, or shuning uchun instead of another period. No commas, quotation marks, exclamation marks, question marks, colons, semicolons, hyphens, dashes, brackets, slashes, or emojis. The only mark allowed inside a word is the Uzbek letter in o‘ and g‘. Show a question by word order inside the same sentence.
+The words inside reaction_and_correction and spoken_reply may contain only letters, spaces, and periods. In Uzbek a period closes a completed sentence, when the thought has a finished shape and the next thought begins. Do not put a period after one word, inside a phrase, or in the middle of an unfinished clause. Connect an unfinished step with va, chunki, or shuning uchun. No commas, quotation marks, exclamation marks, question marks, colons, semicolons, hyphens, dashes, brackets, slashes, or emojis. The only mark allowed inside a word is the Uzbek letter in o‘ and g‘. Show a question by word order, and if that question is a finished sentence close it with a period.
 
 Never use prosto or vapshe, in any spelling. Do not replace them with another filler such as karochi, norm, tema, varianti, or takshta. If you need simply, at all, or really, say shunchaki, umuman, aslo, or haqiqatan.
 
@@ -119,9 +119,9 @@ spoken_reply:
 - This is said aloud in one even unhurried flow. Sound like a calm person thinking out loud, not a bot and not a list of short stops.
 - Build the thought in order. Open from their words, continue with the reason or the shade of meaning, and land on one practical line they can actually say. Do not skip ahead to the English sentence with no setup, and do not stop on a bare label.
 - Letters, spaces, and periods only. No commas, quotation marks, exclamation marks, question marks, colons, dashes, brackets, or emojis.
-- Do not put a period after a tiny clause. One reply is usually a single connected sentence with one period at the end. A second period is allowed only when a new full thought begins.
-- Join the steps with chunki, shuning uchun, or va so the voice does not stop and restart. Do not use formulaic bridges such as demak, xulosa, birinchi, or ikkinchi.
-- The model English is the same plain words, not wrapped in quotes. Example shape, not a script to copy: Kecha haqida gapirsang went kerak chunki ish tugagan va shu yerda I went to school yesterday deb aytasan endi kecha nima qilganingni shu gap bilan aytib ber.
+- Put a period only where a sentence is grammatically finished. Do not put one after a fragment or inside a phrase. A second period starts the next finished sentence.
+- Join an unfinished step with chunki, shuning uchun, or va. Do not use formulaic bridges such as demak, xulosa, birinchi, or ikkinchi.
+- Keep Uzbek words in a row and the model English as one uninterrupted run of English words, with no quotation marks. A single English word you are naming, such as went, may stand alone. Example shape, not a script to copy: Kecha haqida gapirsang went kerak chunki ish tugagan va shu gap I went to school yesterday bo‘ladi endi kecha nima qilganingni shu gap bilan aytib ber.
 - Do not begin with salom qandaysan or X ingliz tilida. Start on the useful thought.
 - If nothing was wrong, still answer in full Uzbek words. When you offer English, keep that full sentence as words. Then ask exactly one follow-up by word order.
 - Vary the wording from turn to turn. Match their level with simpler or slightly richer Uzbek. A1 is simpler, not broken. IELTS ends with one complete Speaking question in words.
@@ -725,34 +725,63 @@ function ensureVoices() {
   });
 }
 
-function looksLikeUzbek(text) {
-  return /[ʻʼ’‘]|o‘|g‘|\bo['']|\bg['']|\b(nima|deyil|deyapsan|boshqacha|qanday|rahmat|yaxshi|sen|men|bu|prosta|vabshe|karochi|norm|tema|varianti|takshta|yo‘q|emas|qil|ayt|gapir|ha|lekin|endi|kel)\b/i.test(
-    text
-  );
+const UZBEK_WORDS = new Set(
+  `nima deyil deyapsan deyiladi deyasan deyilmaydi boshqacha qanday qandaysan rahmat yaxshi sen men bu mana va chunki shuning uchun yo'q yoq emas qil ayt aytasan ayting aytadi gapir gap ha lekin endi kel kecha bugun ertaga ish tugagan kerak to'g'ri tog'ri to'gri shu yerda bilan deb qilganingni qilding qildim aytib ber do'st dost ingliz tilida tilidan haqida gapirsang bo'ladi boladi bo'lsang bolsang sening mening uning biz siz ular bor ham esa agar unda keyin oldin ichida maktab maktabda do'stim dostim gaplashdim sog'insang soginsang mumkin ishlatasan yana bir qayta takrorla eshit yoz yozing o'qi o'qing ko'r ko'ring tushunarli mayli xo'sh qara hoy gapni shu gap bilan endi nima haqida ishlatasan bo'lgan qilgan keldim keldi bordim bordi aytdim`.split(
+    /\s+/
+  )
+);
+
+const ENGLISH_WORDS = new Set(
+  `i you he she it we they me him her us them my your his our their a an the to of in on at for with from by as is am are was were be been being do does did have has had will would can could should may might might must not no yes and or but if then so that this these those there here what when where who why how went go going gone school yesterday today tomorrow friend thank thanks please sorry hello good morning night want need like love miss said say says very really just about because before after into over under again now well right wrong english sentence home walked way all yesterday i'm don't doesn't didn't it's that's you're we're they're i've can't won't miss friend`.split(
+    /\s+/
+  )
+);
+
+function foldWord(word) {
+  return String(word || "")
+    .toLowerCase()
+    .replace(/[ʻʼ’‘\u2018\u2019\u02BB\u02BC]/g, "'");
+}
+
+function tokenLang(token) {
+  const key = foldWord(String(token || "").replace(/\.+$/g, ""));
+  if (!key) return "";
+  if (ENGLISH_WORDS.has(key)) return "en-US";
+  if (UZBEK_WORDS.has(key) || /o'|g'/.test(key)) return "uz-UZ";
+  return "";
 }
 
 /**
- * Uzbek stays outside quotes so it can use an Uzbek cadence.
- * The model English phrase stays inside quotes and is spoken clearly.
+ * Keep word order. Uzbek runs use an Uzbek voice and English runs use an English voice.
  */
-function splitSpokenLine(text) {
+function segmentLanguages(text) {
   const source = String(text || "").trim();
-  const parts = [];
-  const pattern = /"([^"]+)"|“([^”]+)”|«([^»]+)»/g;
-  let last = 0;
-  let match = pattern.exec(source);
-  while (match) {
-    const before = source.slice(last, match.index).replace(/\s+/g, " ").trim();
-    if (before) parts.push({ text: before, lang: looksLikeUzbek(before) ? "uz-UZ" : "en-US" });
-    const english = (match[1] || match[2] || match[3] || "").replace(/\s+/g, " ").trim();
-    if (english) parts.push({ text: english, lang: "en-US" });
-    last = match.index + match[0].length;
-    match = pattern.exec(source);
+  if (!source) return [];
+  const tokens = source.match(/[0-9A-Za-z\u0400-\u04FF\u2018\u2019\u02BB\u02BC']+\.?|\./g) || [];
+  const labels = tokens.map((token) => tokenLang(token));
+  for (let index = 0; index < labels.length; index += 1) {
+    if (!labels[index] && index > 0) labels[index] = labels[index - 1];
   }
-  const tail = source.slice(last).replace(/\s+/g, " ").trim();
-  if (tail) parts.push({ text: tail, lang: looksLikeUzbek(tail) || parts.length ? "uz-UZ" : "en-US" });
-  if (!parts.length && source) parts.push({ text: source, lang: looksLikeUzbek(source) ? "uz-UZ" : "en-US" });
-  return parts;
+  for (let index = labels.length - 1; index >= 0; index -= 1) {
+    if (!labels[index]) labels[index] = index + 1 < labels.length ? labels[index + 1] : "uz-UZ";
+  }
+  const parts = [];
+  tokens.forEach((token, index) => {
+    const lang = labels[index] || "uz-UZ";
+    const prev = parts[parts.length - 1];
+    if (prev && prev.lang === lang) {
+      prev.text = token === "." ? `${prev.text}.` : `${prev.text} ${token}`;
+      return;
+    }
+    if (token === ".") {
+      if (prev) prev.text = `${prev.text}.`;
+      return;
+    }
+    parts.push({ text: token, lang });
+  });
+  return parts
+    .map((part) => ({ text: part.text.replace(/\s+\./g, ".").replace(/\s+/g, " ").trim(), lang: part.lang }))
+    .filter((part) => part.text && part.text !== ".");
 }
 
 function splitSentences(text) {
@@ -808,7 +837,7 @@ function splitForSpeech(segment) {
 }
 
 function spokenSegments(text) {
-  return splitSpokenLine(text).flatMap(splitForSpeech);
+  return segmentLanguages(text).flatMap(splitForSpeech);
 }
 
 /**
@@ -852,7 +881,7 @@ function relaxStops(value) {
   pieces.forEach((piece, index) => {
     bucket = bucket ? `${bucket} ${piece}` : piece;
     const last = index === pieces.length - 1;
-    if (!last && wordsIn(bucket) < 8) return;
+    if (!last && wordsIn(bucket) < 2) return;
     kept.push(bucket.trim());
     bucket = "";
   });
@@ -882,6 +911,7 @@ function chooseVoice(voices, lang) {
       else if (voiceLang.startsWith("az")) score = 40;
       else if (voiceLang.startsWith("kk") || voiceLang.startsWith("ky") || voiceLang.startsWith("tk")) score = 32;
     } else if (voiceLang === "en-us") score = 50;
+    else if (voiceLang === "en-gb") score = 46;
     else if (voiceLang.startsWith("en")) score = 34;
     if (score < 0) return;
     if (/natural|neural|premium|enhanced|google|siri|online/.test(name)) score += 24;
