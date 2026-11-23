@@ -230,6 +230,34 @@ function setAvatarState(state) {
   statusEl.dataset.state = state;
   statusTextEl.textContent = STATUS_TEXT[state];
   if (state !== "speaking") stopMouth();
+  if (state === "thinking") setSticker("explain", true);
+  else if (state === "surprised") setSticker("lively", true);
+  else if (state !== "speaking") setSticker("ready", true);
+}
+
+const STICKERS = ["ready", "smile", "explain", "lively"];
+let stickerName = "ready";
+let stickerAt = 0;
+
+function setSticker(next, force) {
+  if (!STICKERS.includes(next) || !avatarEl) return;
+  const now = performance.now();
+  if (!force && next !== stickerName && now - stickerAt < 520) return;
+  if (next === stickerName) return;
+  stickerName = next;
+  stickerAt = now;
+  avatarEl.dataset.sticker = next;
+}
+
+function stickerForSpeech(sample, lang) {
+  const text = String(sample || "").toLowerCase();
+  if (/\b(salom|hello|hey|rahmat|thanks|thank|yaxshi|good|great|wow|do'st|dost)\b/.test(text)) return "smile";
+  if (/\b(nima|deyil|deyapsan|qara|endi|boshqacha|kerak)\b/.test(text)) return "lively";
+  if (lang === "en-US" || /\b(i|you|went|go|school|yesterday|friend|the|is|am|are)\b/.test(text)) return "explain";
+  const vowels = (text.match(/[aeiouy]/g) || []).length;
+  if (vowels >= 3 && text.length < 14) return "lively";
+  if (text.length > 8) return "explain";
+  return "smile";
 }
 
 let mouthFrame = 0;
@@ -248,6 +276,7 @@ function stopMouth() {
   if (mouthFrame) cancelAnimationFrame(mouthFrame);
   mouthFrame = 0;
   setMouth(0);
+  setSticker("ready", true);
 }
 
 function startMouth() {
@@ -270,11 +299,12 @@ function startMouth() {
   mouthFrame = requestAnimationFrame(tick);
 }
 
-function nudgeMouth(sample, boundary) {
+function nudgeMouth(sample, boundary, lang) {
   const vowels = (String(sample || "").match(/[aeiouy]/gi) || []).length;
   mouthBoost = boundary === "word" ? Math.min(1, 0.58 + vowels * 0.12) : Math.min(0.82, 0.36 + vowels * 0.16);
   mouthBoostAt = performance.now();
   startMouth();
+  setSticker(stickerForSpeech(sample, lang));
 }
 
 function clearSequence() {
@@ -1159,13 +1189,15 @@ async function speakReply(text, lang, serial, options) {
       }
       utterance.onstart = () => {
         if (token !== speechToken) return;
-        nudgeMouth(segment.text.slice(0, 6), "word");
+        nudgeMouth(segment.text.slice(0, 8), "word", segment.lang);
+        setSticker(stickerForSpeech(segment.text, segment.lang), true);
       };
       utterance.onboundary = (event) => {
         if (token !== speechToken) return;
         const at = event.charIndex || 0;
-        const len = event.charLength || 3;
-        nudgeMouth(segment.text.slice(at, at + Math.max(len, 1)), event.name);
+        const len = event.charLength || 4;
+        const word = segment.text.slice(at, at + Math.max(len, 1));
+        nudgeMouth(word, event.name, segment.lang);
       };
       utterance.onend = () => {
         if (token !== speechToken) return;

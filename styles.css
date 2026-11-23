@@ -313,6 +313,22 @@ h1 {
   transform: rotate(-18deg);
 }
 
+.drop,
+.brow,
+.eye,
+.blush,
+.arm,
+.mouth {
+  transition:
+    transform 320ms ease,
+    background 320ms ease,
+    filter 320ms ease,
+    width 320ms ease,
+    top 320ms ease,
+    height 90ms linear,
+    opacity 180ms ease;
+}
+
 .drop {
   position: absolute;
   left: 68px;
@@ -438,6 +454,76 @@ h1 {
     transparent 7px 10px
   );
   opacity: var(--mouth);
+}
+
+.avatar[data-sticker="smile"] .drop {
+  background:
+    radial-gradient(70px 48px at 42% 18%, rgba(255, 255, 255, 0.95), transparent 70%),
+    linear-gradient(180deg, #fff 0%, #ffe8f1 70%, #ffd0e0 100%);
+  box-shadow:
+    0 0 0 6px #ffb3c9,
+    0 18px 32px rgba(214, 92, 130, 0.16);
+}
+
+.avatar[data-sticker="smile"] .mouth {
+  width: 58px;
+  height: calc(16px + (var(--mouth) * 24px));
+  border-radius: 10px 10px 28px 28px;
+}
+
+.avatar[data-sticker="smile"] .teeth {
+  opacity: calc(0.72 + (var(--mouth) * 0.28));
+}
+
+.avatar[data-sticker="smile"] .eye {
+  height: 42px;
+  top: 86px;
+}
+
+.avatar[data-sticker="smile"] .blush {
+  transform: scale(1.35);
+}
+
+.avatar[data-sticker="explain"] .drop {
+  transform: rotate(-3deg);
+}
+
+.avatar[data-sticker="explain"] .brow-left {
+  transform: translateY(-8px) rotate(16deg);
+}
+
+.avatar[data-sticker="explain"] .brow-right {
+  transform: translateY(-2px) rotate(-6deg);
+}
+
+.avatar[data-sticker="explain"] .eye-left .pupil {
+  margin-left: -4px;
+}
+
+.avatar[data-sticker="explain"] .eye-right .pupil {
+  margin-left: -14px;
+}
+
+.avatar[data-sticker="lively"] .drop {
+  filter: saturate(1.2);
+  transform: translateY(-4px);
+}
+
+.avatar[data-sticker="lively"] .eye {
+  transform: scale(1.1);
+}
+
+.avatar[data-sticker="lively"] .arm-left {
+  transform: rotate(30deg);
+}
+
+.avatar[data-sticker="lively"] .arm-right {
+  transform: rotate(-30deg);
+}
+
+.avatar[data-sticker="lively"] .mouth {
+  width: 52px;
+  height: calc(12px + (var(--mouth) * 32px));
 }
 
 .stage-foot {
