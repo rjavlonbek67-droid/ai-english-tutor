@@ -108,6 +108,7 @@ Return ONLY JSON with these fields:
 reaction_and_correction:
 - Write a short human explanation in spoken Uzbek, as a mentor sitting next to them, not a checklist.
 - Letters, spaces, and periods only. No other punctuation and no symbols.
+- Notice the exact words they just used. If the English or Uzbek answer is wrong, say what they tried and what is off, stay warm and direct, then give the full correct sentence. If the answer is right, say so in ordinary words before you add anything.
 - If the word, phrase, grammar, or tone is wrong or awkward, say it openly and specifically. You may say Nima deyapsan u bunaqa deyilmaydi boshqacha deyiladi when the miss is obvious, but do not start every reply that way. Then give one finished reason and the full natural English sentence as words.
 - Soften only the sharpness for A1, never the honesty. For a correct line, react like a person who noticed, and skip the scolding.
 - When the mode is IELTS, or they ask for formal English, show the everyday sentence and one higher-band sentence, with one concrete reason they differ.
@@ -118,7 +119,7 @@ reaction_and_correction:
 
 spoken_reply:
 - This is said aloud in one even unhurried flow. Sound like a calm person thinking out loud, not a bot and not a list of short stops.
-- Build the thought in order. Open from their words, continue with the reason or the shade of meaning, and land on one practical line they can actually say. Do not skip ahead to the English sentence with no setup, and do not stop on a bare label.
+- Build the thought in order. Open from their words, including a wrong answer, continue with the reason or the shade of meaning, and land on one practical line they can actually say. Do not skip ahead to the English sentence with no setup, and do not stop on a bare label.
 - Letters, spaces, and periods only. No commas, quotation marks, exclamation marks, question marks, colons, dashes, brackets, or emojis.
 - Put a period only where a sentence is grammatically finished. Do not put one after a fragment or inside a phrase. A second period starts the next finished sentence.
 - Never mix Uzbek and English inside the same sentence. Write one finished Uzbek sentence, then a period, then the English sentence or phrase, then a period, then the next Uzbek sentence, then a period.
@@ -231,33 +232,520 @@ function setAvatarState(state) {
   statusEl.dataset.state = state;
   statusTextEl.textContent = STATUS_TEXT[state];
   if (state !== "speaking") stopMouth();
-  if (state === "thinking") setSticker("explain", true);
-  else if (state === "surprised") setSticker("angry", true);
+  if (state === "thinking") setSticker(replyMood || "think", true);
+  else if (state === "surprised") setSticker(replyMood || "scream", true);
   else if (state !== "speaking") setSticker("calm", true);
 }
 
-const STICKERS = ["calm", "laugh", "angry", "sad", "explain"];
+const FACE_SPECS = [
+  ["calm", "#ffffff", "#d5e4f5", "open", "soft", ""],
+  ["grin", "#fffdf5", "#f0d48a", "open", "grin", "blush"],
+  ["beam", "#fff8ee", "#f0b429", "shut", "teeth", "blush"],
+  ["squint", "#fff7fb", "#ffb3c9", "shut", "laugh", "blush"],
+  ["sweatlaugh", "#fff7fb", "#ffb3c9", "shut", "laugh", "sweat"],
+  ["joy", "#fff4f8", "#ff9bb5", "shut", "laugh", "tears"],
+  ["rofl", "#fff1f6", "#ff8fab", "shut", "laugh", "tilt"],
+  ["angel", "#f7fbff", "#b9d4ff", "shut", "soft", "halo"],
+  ["melt", "#fff8f2", "#ffc7a3", "sleepy", "soft", "melt"],
+  ["soft", "#ffffff", "#f3c1d3", "open", "soft", "blush"],
+  ["love", "#fff5f8", "#ff9ec4", "heart", "soft", "blush"],
+  ["tearsmile", "#f7fbff", "#b9d4ff", "open", "soft", "tear"],
+  ["kiss", "#fff5f8", "#ffb3d0", "shut", "kiss", "blush"],
+  ["star", "#fffdf2", "#f0d36a", "star", "grin", ""],
+  ["zany", "#f6fff4", "#9adf7a", "wink", "tongue", ""],
+  ["money", "#f4fff6", "#7dcea0", "dollar", "grin", ""],
+  ["hug", "#fff7f2", "#ffc2a8", "shut", "soft", "hug"],
+  ["giggle", "#fff7fb", "#ffb3c9", "open", "flat", "giggle"],
+  ["think", "#f7fbff", "#9dcbff", "up", "flat", "chin"],
+  ["shush", "#f8fafc", "#c5d0dc", "open", "flat", "shush"],
+  ["peek", "#ffffff", "#d5e4f5", "peek", "soft", "peek"],
+  ["salute", "#f4f8ff", "#9db7e8", "open", "flat", "salute"],
+  ["sick", "#f3fff6", "#8fd19a", "sleepy", "wavy", ""],
+  ["vomit", "#f3fff4", "#7dcea0", "shut", "wavy", "vomit"],
+  ["mask", "#f7fbff", "#b9d4ff", "open", "flat", "mask"],
+  ["hot", "#fff1ee", "#ff8d7a", "sleepy", "tongue", "hot"],
+  ["cold", "#f3f8ff", "#8eb6ff", "shut", "wavy", "cold"],
+  ["shake", "#ffffff", "#d5e4f5", "wide", "flat", ""],
+  ["drool", "#f7fbff", "#b9d4ff", "sleepy", "soft", "drool"],
+  ["cowboy", "#fff8ee", "#e2b56a", "open", "grin", "hat"],
+  ["spiral", "#f8f6ff", "#c4b5fd", "spiral", "oh", ""],
+  ["blown", "#fff7ee", "#ffb35c", "wide", "oh", "blown"],
+  ["dizzy", "#f8f6ff", "#c4b5fd", "cross", "wavy", ""],
+  ["woozy", "#f8fff4", "#b7e4a8", "uneven", "wavy", ""],
+  ["monocle", "#f7fbff", "#9dcbff", "open", "flat", "monocle"],
+  ["plead", "#f7fbff", "#b9d4ff", "wide", "soft", "plead"],
+  ["scream", "#fff6f4", "#ffb0a4", "wide", "oh", "scream"],
+  ["huff", "#fff4f2", "#ffb0a4", "open", "flat", "steam"],
+  ["swear", "#fff1ee", "#ff8d7a", "shut", "flat", "scribble"],
+  ["rage", "#ffe8e4", "#ff6b57", "wide", "frown", "steam"],
+  ["angry", "#fff4f2", "#ff8d7a", "open", "frown", "brows"],
+  ["persevere", "#fff6f2", "#ffc2a8", "shut", "flat", "sweat"],
+  ["anxious", "#f4f8ff", "#b9cff0", "wide", "wavy", "sweat"],
+  ["yawn", "#f7fbff", "#c5d7ee", "sleepy", "oh", "yawn"],
+];
+
+const STICKER_ALIAS = { laugh: "joy", explain: "think", sad: "plead" };
+const STICKER_IDS = new Set(FACE_SPECS.map((spec) => spec[0]));
+const MOOD_PALETTES = {
+  firm: ["think", "persevere", "huff", "monocle", "plead", "angry", "grin"],
+  warm: ["soft", "love", "angel", "kiss", "tearsmile", "grin", "hug"],
+  laugh: ["squint", "joy", "rofl", "sweatlaugh", "beam", "giggle"],
+  think: ["think", "monocle", "peek", "salute", "shush"],
+  low: ["plead", "anxious", "tearsmile", "yawn", "melt"],
+  sick: ["sick", "woozy", "dizzy", "spiral", "mask", "cold", "vomit"],
+  calm: ["calm", "soft", "think", "grin", "peek", "salute", "beam"],
+};
+const WORD_MOOD = {
+  yaxshi: "grin",
+  zor: "beam",
+  ajoyib: "star",
+  great: "grin",
+  good: "soft",
+  nice: "soft",
+  happy: "grin",
+  rahmat: "soft",
+  thanks: "soft",
+  thank: "soft",
+  hello: "cowboy",
+  hey: "cowboy",
+  salom: "soft",
+  kul: "squint",
+  kulgi: "joy",
+  haha: "joy",
+  qiziq: "joy",
+  funny: "rofl",
+  love: "love",
+  miss: "tearsmile",
+  friend: "hug",
+  dost: "hug",
+  sevgi: "love",
+  sevaman: "love",
+  sweet: "kiss",
+  think: "think",
+  oyla: "think",
+  why: "monocle",
+  how: "monocle",
+  nima: "think",
+  qanday: "think",
+  meaning: "monocle",
+  quiet: "shush",
+  jim: "shush",
+  sekin: "shush",
+  look: "peek",
+  see: "peek",
+  qara: "peek",
+  ready: "salute",
+  tayyor: "salute",
+  sick: "sick",
+  kasal: "sick",
+  ill: "mask",
+  hot: "hot",
+  issiq: "hot",
+  cold: "cold",
+  sovuq: "cold",
+  wow: "blown",
+  voy: "blown",
+  really: "scream",
+  xato: "huff",
+  wrong: "angry",
+  mistake: "persevere",
+  error: "persevere",
+  deyil: "angry",
+  emas: "huff",
+  yoq: "huff",
+  stop: "rage",
+  bas: "rage",
+  sorry: "plead",
+  afsus: "plead",
+  sad: "plead",
+  yomon: "anxious",
+  qiyin: "anxious",
+  worry: "anxious",
+  tired: "yawn",
+  sleep: "drool",
+  charchadim: "yawn",
+  yes: "beam",
+  ha: "soft",
+  right: "grin",
+  togri: "grin",
+  correct: "salute",
+  money: "money",
+  crazy: "zany",
+};
+const MISS_PATTERNS = [
+  /\bi\s+am\s+go\b/,
+  /\bi\s+going\b/,
+  /\bi\s+go\s+yesterday\b/,
+  /\byesterday\s+i\s+go\b/,
+  /\bhe\s+go\b/,
+  /\bshe\s+go\b/,
+  /\bthey\s+is\b/,
+  /\bhe\s+don't\b/,
+  /\bshe\s+don't\b/,
+  /\bi\s+is\b/,
+  /\bdon't\s+no\b/,
+  /\bme\s+(is|am|are|want)\b/,
+  /\bthanks\s+you\b/,
+  /\bmore\s+(good|better)\b/,
+  /\bi\s+want\s+go\b/,
+  /\bi\s+can\s+to\b/,
+  /\bgo\s+to\s+home\b/,
+  /\bi\s+am\s+agree\b/,
+];
+
+let stickersReady = false;
 let stickerName = "calm";
 let stickerAt = 0;
+let replyMood = "think";
+let userMissed = false;
+let speechPalette = "calm";
+let speechCursor = 0;
 
-function setSticker(next, force) {
-  if (!STICKERS.includes(next) || !avatarEl) return;
-  const now = performance.now();
-  if (!force && next !== stickerName && now - stickerAt < 520) return;
-  if (next === stickerName) return;
-  stickerName = next;
-  stickerAt = now;
-  avatarEl.dataset.sticker = next;
+function svgNode(tag, attrs) {
+  const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  Object.keys(attrs).forEach((key) => node.setAttribute(key, attrs[key]));
+  return node;
 }
 
-function stickerForSpeech(sample, lang, paceFast) {
-  const text = String(sample || "").toLowerCase();
-  if (paceFast) return "angry";
-  if (/\b(afsus|qiyin|xato|sorry|sad|yomon|yigla|alam|tough)\b/.test(text)) return "sad";
-  if (/\b(kul|haha|ajoyib|zor|yaxshi|great|wow|rahmat|salom|hello|hey|good)\b/.test(text)) return "laugh";
-  if (/\b(yoq|deyil|deyapsan|boshqacha|wrong|stop|emas)\b/.test(text)) return "angry";
-  if (lang === "en-US" || /\b(i|you|went|go|school|yesterday|friend|the|is|am|are)\b/.test(text)) return "explain";
+function starPoints(cx, cy, outer, inner) {
+  const points = [];
+  for (let i = 0; i < 10; i += 1) {
+    const radius = i % 2 === 0 ? outer : inner;
+    const angle = -Math.PI / 2 + i * Math.PI / 5;
+    points.push(`${(cx + Math.cos(angle) * radius).toFixed(1)},${(cy + Math.sin(angle) * radius).toFixed(1)}`);
+  }
+  return points.join(" ");
+}
+
+function mountStickers() {
+  if (stickersReady || !avatarEl) return;
+  stickersReady = true;
+  avatarEl.querySelectorAll(".sticker").forEach((node) => node.remove());
+  FACE_SPECS.forEach((spec) => avatarEl.appendChild(buildSticker(spec)));
+}
+
+function buildSticker(spec) {
+  const [id, fill, stroke, eyes, mouth, extra] = spec;
+  const svg = svgNode("svg", { class: `sticker sticker-${id}`, viewBox: "0 0 200 200", "aria-hidden": "true" });
+  const root = extra === "tilt" ? svgNode("g", { transform: "rotate(-8 100 108)" }) : svg;
+  if (extra === "tilt") svg.appendChild(root);
+  const add = (node) => root.appendChild(node);
+  add(svgNode("rect", { x: "18", y: "18", width: "164", height: "164", rx: "36", fill, stroke, "stroke-width": "4" }));
+  if (extra === "halo") {
+    add(svgNode("ellipse", { cx: "100", cy: "16", rx: "36", ry: "10", fill: "none", stroke: "#f5c542", "stroke-width": "6" }));
+  }
+  if (extra === "hat") {
+    add(svgNode("path", { d: "M58 70h84l-12-26H70z", fill: "#c9892d" }));
+    add(svgNode("rect", { x: "40", y: "66", width: "120", height: "12", rx: "4", fill: "#8a5a16" }));
+  }
+  if (extra === "brows" || mouth === "frown" || extra === "steam") addBrows(add, "angry");
+  else if (extra === "plead" || extra === "tear" || eyes === "wide" && mouth === "wavy") addBrows(add, "sad");
+  else if (extra === "chin" || extra === "monocle") addBrows(add, "think");
+  addEyes(add, eyes);
+  addMouth(add, mouth);
+  addExtra(add, extra);
+  return svg;
+}
+
+function addBrows(add, kind) {
+  const stroke = kind === "angry" ? "#c2412d" : "#2457c5";
+  if (kind === "angry") {
+    add(svgNode("path", { d: "M58 70l28 14", fill: "none", stroke, "stroke-width": "7", "stroke-linecap": "round" }));
+    add(svgNode("path", { d: "M142 70l-28 14", fill: "none", stroke, "stroke-width": "7", "stroke-linecap": "round" }));
+    return;
+  }
+  if (kind === "sad") {
+    add(svgNode("path", { d: "M58 86c10-12 22-12 30 0", fill: "none", stroke, "stroke-width": "5", "stroke-linecap": "round" }));
+    add(svgNode("path", { d: "M112 86c8-12 20-12 30 0", fill: "none", stroke, "stroke-width": "5", "stroke-linecap": "round" }));
+    return;
+  }
+  add(svgNode("path", { d: "M58 74l26 8", fill: "none", stroke, "stroke-width": "6", "stroke-linecap": "round" }));
+  add(svgNode("path", { d: "M116 78h28", fill: "none", stroke, "stroke-width": "6", "stroke-linecap": "round" }));
+}
+
+function addEyes(add, type) {
+  const left = 76;
+  const right = 124;
+  const y = 96;
+  if (type === "shut") {
+    add(svgNode("path", { d: "M60 96c10 12 22 12 32 0", fill: "none", stroke: "#1b2838", "stroke-width": "6", "stroke-linecap": "round" }));
+    add(svgNode("path", { d: "M108 96c10 12 22 12 32 0", fill: "none", stroke: "#1b2838", "stroke-width": "6", "stroke-linecap": "round" }));
+    return;
+  }
+  if (type === "heart") {
+    [left, right].forEach((cx) => {
+      add(svgNode("path", {
+        d: `M${cx} ${y + 8} C${cx - 16} ${y - 10} ${cx - 8} ${y - 20} ${cx} ${y - 6} C${cx + 8} ${y - 20} ${cx + 16} ${y - 10} ${cx} ${y + 8} Z`,
+        fill: "#e11d48",
+      }));
+    });
+    return;
+  }
+  if (type === "star") {
+    [left, right].forEach((cx) => add(svgNode("polygon", { points: starPoints(cx, y, 14, 6), fill: "#f5b400" })));
+    return;
+  }
+  if (type === "dollar") {
+    [left, right].forEach((cx) => {
+      add(svgNode("circle", { cx, cy: y, r: "14", fill: "#147a3d" }));
+      add(svgNode("path", {
+        d: `M${cx + 4} ${y - 8}c-8-2-12 2-8 6s12 4 8 8-2 8-8 6`,
+        fill: "none",
+        stroke: "#fff",
+        "stroke-width": "3",
+        "stroke-linecap": "round",
+      }));
+    });
+    return;
+  }
+  if (type === "spiral") {
+    [left, right].forEach((cx) => {
+      add(svgNode("path", {
+        d: `M${cx} ${y} m-1 0 a2 2 0 1 1 5 0 a5 5 0 1 1 -10 0 a8 8 0 1 1 16 0`,
+        fill: "none",
+        stroke: "#5b4b8a",
+        "stroke-width": "3",
+      }));
+    });
+    return;
+  }
+  if (type === "cross") {
+    [left, right].forEach((cx) => {
+      add(svgNode("path", { d: `M${cx - 10} ${y - 10}l20 20M${cx + 10} ${y - 10}l-20 20`, fill: "none", stroke: "#5b4b8a", "stroke-width": "5", "stroke-linecap": "round" }));
+    });
+    return;
+  }
+  if (type === "wink") {
+    add(svgNode("path", { d: "M60 96c10 12 22 12 32 0", fill: "none", stroke: "#1b2838", "stroke-width": "6", "stroke-linecap": "round" }));
+    addOpenEye(add, right, y, 12);
+    return;
+  }
+  if (type === "sleepy") {
+    [left, right].forEach((cx) => {
+      add(svgNode("path", { d: `M${cx - 14} ${y} h28`, fill: "none", stroke: "#1b2838", "stroke-width": "6", "stroke-linecap": "round" }));
+      add(svgNode("path", { d: `M${cx - 12} ${y} a12 10 0 0 0 24 0`, fill: "#1d4fbe" }));
+    });
+    return;
+  }
+  if (type === "wide") {
+    [left, right].forEach((cx) => addOpenEye(add, cx, y, 16));
+    return;
+  }
+  if (type === "peek") {
+    add(svgNode("path", { d: "M48 78h40v28H48z", fill: "#1b2838" }));
+    addOpenEye(add, right, y, 12);
+    return;
+  }
+  if (type === "uneven") {
+    addOpenEye(add, left, y - 6, 11);
+    addOpenEye(add, right, y + 8, 14);
+    return;
+  }
+  if (type === "up") {
+    [left, right].forEach((cx) => {
+      add(svgNode("circle", { cx, cy: y, r: "13", fill: "#fff", stroke: "#1d4fbe", "stroke-width": "3" }));
+      add(svgNode("circle", { cx, cy: y - 5, r: "5", fill: "#1d4fbe" }));
+    });
+    return;
+  }
+  [left, right].forEach((cx) => addOpenEye(add, cx, y, 13));
+}
+
+function addOpenEye(add, cx, cy, r) {
+  add(svgNode("circle", { cx, cy, r, fill: "#1d4fbe" }));
+  add(svgNode("circle", { cx: cx + 4, cy: cy - 4, r: "4", fill: "#fff" }));
+}
+
+function addMouth(add, type) {
+  if (type === "grin" || type === "soft") {
+    const drop = type === "grin" ? 18 : 12;
+    add(svgNode("path", { d: `M70 128c16 ${drop} 44 ${drop} 60 0`, fill: "none", stroke: "#1b2838", "stroke-width": "6", "stroke-linecap": "round" }));
+    return;
+  }
+  if (type === "teeth" || type === "laugh") {
+    add(svgNode("path", { d: "M68 118c16 30 48 30 64 0", fill: "#1b2838" }));
+    add(svgNode("rect", { x: "78", y: "124", width: "44", height: "8", fill: "#fff" }));
+    return;
+  }
+  if (type === "frown") {
+    add(svgNode("path", { d: "M72 146c14-18 42-18 56 0", fill: "none", stroke: "#c2412d", "stroke-width": "6", "stroke-linecap": "round" }));
+    return;
+  }
+  if (type === "oh") {
+    add(svgNode("ellipse", { cx: "100", cy: "136", rx: "16", ry: "18", fill: "#1b2838" }));
+    return;
+  }
+  if (type === "kiss") {
+    add(svgNode("circle", { cx: "100", cy: "136", r: "8", fill: "none", stroke: "#e11d48", "stroke-width": "4" }));
+    return;
+  }
+  if (type === "flat") {
+    add(svgNode("path", { d: "M76 136h48", fill: "none", stroke: "#1b2838", "stroke-width": "6", "stroke-linecap": "round" }));
+    return;
+  }
+  if (type === "tongue") {
+    add(svgNode("path", { d: "M74 128c12 10 40 10 52 0", fill: "none", stroke: "#1b2838", "stroke-width": "6", "stroke-linecap": "round" }));
+    add(svgNode("ellipse", { cx: "100", cy: "142", rx: "10", ry: "12", fill: "#ff7a93" }));
+    return;
+  }
+  if (type === "wavy") {
+    add(svgNode("path", { d: "M70 136c10 10 14-10 24 0s14-10 26 0", fill: "none", stroke: "#1b2838", "stroke-width": "6", "stroke-linecap": "round" }));
+  }
+}
+
+function addExtra(add, extra) {
+  if (extra === "blush" || extra === "giggle" || extra === "kiss") {
+    add(svgNode("circle", { cx: "52", cy: "118", r: "8", fill: "#ffb3c9" }));
+    add(svgNode("circle", { cx: "148", cy: "118", r: "8", fill: "#ffb3c9" }));
+  }
+  if (extra === "tear" || extra === "plead") {
+    add(svgNode("path", { d: "M124 112c4 12 4 20 0 28", fill: "none", stroke: "#5aa7ff", "stroke-width": "5", "stroke-linecap": "round" }));
+  }
+  if (extra === "tears") {
+    add(svgNode("path", { d: "M70 108c6 16 6 28 0 40", fill: "none", stroke: "#5aa7ff", "stroke-width": "5", "stroke-linecap": "round" }));
+    add(svgNode("path", { d: "M130 108c6 16 6 28 0 40", fill: "none", stroke: "#5aa7ff", "stroke-width": "5", "stroke-linecap": "round" }));
+  }
+  if (extra === "sweat") {
+    add(svgNode("path", { d: "M146 70c8 10 8 16 0 24c-6-8-6-14 0-24z", fill: "#7ec8ff" }));
+  }
+  if (extra === "melt") {
+    add(svgNode("path", { d: "M40 150c8 18 8 28 0 36M160 146c-8 16-6 28 2 36", fill: "none", stroke: "#ffb089", "stroke-width": "8", "stroke-linecap": "round" }));
+  }
+  if (extra === "mask") {
+    add(svgNode("rect", { x: "58", y: "118", width: "84", height: "36", rx: "16", fill: "#e8eef5", stroke: "#8aa4c8", "stroke-width": "3" }));
+    add(svgNode("path", { d: "M58 132H36M142 132h22", fill: "none", stroke: "#8aa4c8", "stroke-width": "4" }));
+  }
+  if (extra === "hot") {
+    add(svgNode("path", { d: "M148 58c8-14 18-8 12 6", fill: "none", stroke: "#ff6b57", "stroke-width": "4", "stroke-linecap": "round" }));
+  }
+  if (extra === "cold") {
+    add(svgNode("path", { d: "M46 64h16M54 56v16M148 150h14M155 143v14", fill: "none", stroke: "#6aa7ff", "stroke-width": "3" }));
+  }
+  if (extra === "drool") {
+    add(svgNode("path", { d: "M118 142c6 16 4 28-2 36", fill: "none", stroke: "#7ec8ff", "stroke-width": "5", "stroke-linecap": "round" }));
+  }
+  if (extra === "vomit") {
+    add(svgNode("path", { d: "M88 146c8 16 20 22 24 34", fill: "none", stroke: "#67b36a", "stroke-width": "8", "stroke-linecap": "round" }));
+  }
+  if (extra === "steam" || extra === "blown") {
+    add(svgNode("path", { d: "M78 58c6-12 16-8 12 4M112 52c8-14 18-6 10 8", fill: "none", stroke: "#ff8d7a", "stroke-width": "4", "stroke-linecap": "round" }));
+  }
+  if (extra === "scribble") {
+    add(svgNode("path", { d: "M72 128l10 12 8-14 10 16 8-12 10 14", fill: "none", stroke: "#c2412d", "stroke-width": "4", "stroke-linecap": "round" }));
+  }
+  if (extra === "monocle") {
+    add(svgNode("circle", { cx: "124", cy: "96", r: "18", fill: "none", stroke: "#2457c5", "stroke-width": "4" }));
+    add(svgNode("path", { d: "M142 108c10 16 10 28 4 36", fill: "none", stroke: "#2457c5", "stroke-width": "3" }));
+  }
+  if (extra === "shush") {
+    add(svgNode("rect", { x: "118", y: "118", width: "14", height: "36", rx: "7", fill: "#f3c7a8" }));
+  }
+  if (extra === "peek") {
+    add(svgNode("path", { d: "M42 86h52v22H42z", fill: "#f3c7a8" }));
+  }
+  if (extra === "salute") {
+    add(svgNode("path", { d: "M108 78h34", fill: "none", stroke: "#f3c7a8", "stroke-width": "10", "stroke-linecap": "round" }));
+  }
+  if (extra === "hug") {
+    add(svgNode("path", { d: "M36 110c-8 20 8 36 20 28M164 110c8 20-8 36-20 28", fill: "none", stroke: "#f3c7a8", "stroke-width": "10", "stroke-linecap": "round" }));
+  }
+  if (extra === "giggle") {
+    add(svgNode("path", { d: "M78 124c14 16 30 16 44 0v16H78z", fill: "#f3c7a8" }));
+  }
+  if (extra === "chin") {
+    add(svgNode("circle", { cx: "132", cy: "150", r: "10", fill: "#f3c7a8" }));
+  }
+  if (extra === "yawn") {
+    add(svgNode("path", { d: "M126 118c18 8 22 28 8 36", fill: "none", stroke: "#f3c7a8", "stroke-width": "10", "stroke-linecap": "round" }));
+  }
+  if (extra === "scream") {
+    add(svgNode("circle", { cx: "48", cy: "92", r: "12", fill: "#f3c7a8" }));
+    add(svgNode("circle", { cx: "152", cy: "92", r: "12", fill: "#f3c7a8" }));
+  }
+}
+
+function setSticker(next, force) {
+  mountStickers();
+  const name = STICKER_ALIAS[next] || next;
+  if (!STICKER_IDS.has(name) || !avatarEl) return;
+  const now = performance.now();
+  if (!force && name !== stickerName && now - stickerAt < 150) return;
+  if (name === stickerName) return;
+  stickerName = name;
+  stickerAt = now;
+  avatarEl.dataset.sticker = name;
+  avatarEl.querySelectorAll(".sticker.is-shown").forEach((node) => node.classList.remove("is-shown"));
+  const face = avatarEl.querySelector(`.sticker-${name}`);
+  if (face) face.classList.add("is-shown");
+}
+
+function normalizeToken(raw) {
+  return String(raw || "")
+    .toLowerCase()
+    .replace(/[‘’ʼ`ʻ]/g, "'")
+    .replace(/[^a-z0-9']/g, "");
+}
+
+function wordMood(raw) {
+  const word = normalizeToken(raw);
+  if (!word) return "";
+  if (WORD_MOOD[word]) return WORD_MOOD[word];
+  if (word.startsWith("kul")) return "joy";
+  if (word.startsWith("oyla") || word.startsWith("o'yla")) return "think";
+  if (word.startsWith("xato") || word.startsWith("noto")) return "huff";
+  if (word.startsWith("afsus")) return "plead";
+  if (word.startsWith("charch")) return "yawn";
+  if (word.startsWith("sogin")) return "tearsmile";
+  return "";
+}
+
+function paletteForText(text) {
+  const sample = String(text || "").toLowerCase().replace(/[‘’ʼ`ʻ]/g, "'");
+  if (/\b(xato|noto\w*|wrong|mistake|deyil|emas|boshqacha|stop|angry)\b/.test(sample)) return "firm";
+  if (/\b(kasal|sick|dizzy|sovuq|issiq|hot|cold|vomit)\b/.test(sample)) return "sick";
+  if (/\b(afsus|sorry|sad|qiyin|yomon|worry|tired)\b/.test(sample)) return "low";
+  if (/\b(kul\w*|haha|funny|qiziq)\b/.test(sample)) return "laugh";
+  if (/\b(sevgi|sevaman|love|friend|dost|miss|rahmat|thanks)\b/.test(sample)) return "warm";
+  if (/\b(nima|qanday|why|how|think|oyla)\b/.test(sample)) return "think";
   return "calm";
+}
+
+function isLikelyMiss(text) {
+  const sample = String(text || "").toLowerCase().replace(/[‘’ʼ`ʻ]/g, "'");
+  return MISS_PATTERNS.some((pattern) => pattern.test(sample));
+}
+
+function noteUserLine(text) {
+  userMissed = isLikelyMiss(text);
+  const hit = wordMood(text) || stickerFromText(text);
+  if (userMissed) replyMood = "think";
+  else if (hit) replyMood = hit;
+  else replyMood = "soft";
+  speechPalette = userMissed ? "firm" : paletteForText(text);
+}
+
+function stickerFromText(text) {
+  const parts = String(text || "").split(/\s+/);
+  for (let i = 0; i < parts.length; i += 1) {
+    const hit = wordMood(parts[i]);
+    if (hit) return hit;
+  }
+  return "";
+}
+
+function openingSticker(text) {
+  return stickerFromText(text) || (MOOD_PALETTES[speechPalette] || MOOD_PALETTES.calm)[0];
+}
+
+function nextSpeechSticker(word, paceFast) {
+  const hit = wordMood(word);
+  if (hit) return hit;
+  const palette = MOOD_PALETTES[speechPalette] || MOOD_PALETTES.calm;
+  if (paceFast) return speechCursor % 2 === 0 ? "huff" : "shake";
+  speechCursor += 1;
+  let pick = palette[speechCursor % palette.length];
+  if (pick === stickerName) pick = palette[(speechCursor + 1) % palette.length];
+  return pick;
 }
 
 let mouthFrame = 0;
@@ -299,7 +787,7 @@ function startMouth() {
   mouthFrame = requestAnimationFrame(tick);
 }
 
-function nudgeMouth(sample, boundary, lang) {
+function nudgeMouth(sample, boundary) {
   const now = performance.now();
   const gap = mouthBoostAt ? now - mouthBoostAt : 999;
   const paceFast = boundary === "word" && gap > 40 && gap < 150;
@@ -307,7 +795,14 @@ function nudgeMouth(sample, boundary, lang) {
   mouthBoost = boundary === "word" ? Math.min(1, 0.58 + vowels * 0.12) : Math.min(0.82, 0.36 + vowels * 0.16);
   mouthBoostAt = now;
   startMouth();
-  setSticker(stickerForSpeech(sample, lang, paceFast));
+  if (boundary === "sentence") {
+    speechPalette = paletteForText(sample) === "calm" ? speechPalette : paletteForText(sample);
+    speechCursor = 0;
+    setSticker(openingSticker(sample), true);
+    return;
+  }
+  if (boundary !== "word" && now - stickerAt < 220) return;
+  setSticker(nextSpeechSticker(sample, paceFast));
 }
 
 function clearSequence() {
@@ -1223,15 +1718,16 @@ async function speakReply(text, lang, serial, options) {
       }
       utterance.onstart = () => {
         if (token !== speechToken) return;
-        nudgeMouth(segment.text.slice(0, 8), "word", segment.lang);
-        setSticker(stickerForSpeech(segment.text, segment.lang), true);
+        nudgeMouth(segment.text.slice(0, 8), "word");
+        speechCursor = 0;
+        setSticker(openingSticker(segment.text), true);
       };
       utterance.onboundary = (event) => {
         if (token !== speechToken) return;
         const at = event.charIndex || 0;
         const len = event.charLength || 4;
         const word = segment.text.slice(at, at + Math.max(len, 1));
-        nudgeMouth(word, event.name, segment.lang);
+        nudgeMouth(word, event.name);
       };
       utterance.onend = () => {
         if (token !== speechToken) return;
@@ -1773,7 +2269,9 @@ function presentReply(serial, text, tutor, langAtSend) {
     });
   };
 
-  if (tutor.surprise) {
+  speechPalette = tutor.surprise || userMissed ? "firm" : paletteForText(spoken);
+  replyMood = tutor.surprise || userMissed ? "huff" : (stickerFromText(spoken) || "soft");
+  if (tutor.surprise || userMissed) {
     setAvatarState("surprised");
     avatarEl.dataset.mood = "lively";
     after(SURPRISE_MS, speak);
@@ -1789,6 +2287,7 @@ async function handleSubmit(event) {
   const serial = beginTurn();
 
   if (!text) {
+    replyMood = "anxious";
     setAvatarState("surprised");
     setCard(userCardEl, "Iltimos, avval matn yozing.", false);
     setSubtitle("Iltimos, avval matn yozing.", false);
@@ -1810,6 +2309,7 @@ async function handleSubmit(event) {
     setCard(analysisCardEl, MESSAGES.offline, false);
     setCard(replyCardEl, MESSAGES.noReply, false);
     setSubtitle(MESSAGES.offline, false);
+    replyMood = "anxious";
     setAvatarState("surprised");
     after(SURPRISE_MS, () => {
       if (serial !== requestSerial) return;
@@ -1823,6 +2323,7 @@ async function handleSubmit(event) {
   setCard(analysisCardEl, "Bir zum…", false);
   setCard(replyCardEl, "Bir zum…", false);
   setSubtitle("Bir zum…", false);
+  noteUserLine(text);
   setAvatarState("thinking");
   inputEl.value = "";
 

@@ -300,13 +300,21 @@ h1 {
   transition: opacity 280ms ease, transform 280ms ease;
 }
 
-.avatar[data-sticker="calm"] .sticker-calm,
-.avatar[data-sticker="laugh"] .sticker-laugh,
-.avatar[data-sticker="angry"] .sticker-angry,
-.avatar[data-sticker="sad"] .sticker-sad,
-.avatar[data-sticker="explain"] .sticker-explain {
+.avatar .sticker.is-shown {
   opacity: 1;
   transform: scale(1);
+}
+
+@keyframes sticker-shake {
+  0%, 100% { transform: scale(1) translateX(0); }
+  35% { transform: scale(1) translateX(-5px); }
+  70% { transform: scale(1) translateX(5px); }
+}
+
+.avatar[data-sticker="shake"] .sticker.is-shown,
+.avatar[data-sticker="rofl"] .sticker.is-shown,
+.avatar[data-sticker="blown"] .sticker.is-shown {
+  animation: sticker-shake 280ms ease;
 }
 
 .arm {
