@@ -231,6 +231,7 @@ function after(ms, fn) {
 }
 
 function setCard(el, text, isEmpty) {
+  if (!el) return;
   el.textContent = text;
   el.classList.toggle("is-empty", Boolean(isEmpty));
 }
@@ -480,7 +481,7 @@ function showHeardText() {
   setCard(userCardEl, shown, false);
   setSubtitle(shown, false);
   statusTextEl.textContent = STATUS_TEXT.listening;
-  if (holdingMic && committedFinal.trim()) micBtn.classList.add("is-hearing");
+  if (holdingMic && speechJoin(committedFinal, pendingInterim)) micBtn.classList.add("is-hearing");
 }
 
 function absorbResults(event, committedIndexes) {
@@ -637,25 +638,12 @@ function finishHold() {
   holdingMic = false;
   holdReleasePending = true;
   document.documentElement.classList.remove("is-holding-mic");
-  if (!micActive && !recognition) {
-    holdReleasePending = false;
-    return;
-  }
-  const rec = recognition;
-  if (!rec) {
-    stopListening({ submit: true });
-    return;
-  }
-  try {
-    rec.stop();
-  } catch {
-    stopListening({ submit: true });
-    return;
-  }
-  clearListenTimer();
-  listenTimer = window.setTimeout(() => {
-    if (micActive) stopListening({ submit: true });
-  }, 700);
+  const spoken = speechJoin(committedFinal, pendingInterim);
+  pendingInterim = "";
+  committedFinal = spoken;
+  liveTranscript = spoken;
+  if (spoken) inputEl.value = spoken;
+  stopListening({ submit: true });
 }
 
 function beginHold(event) {
