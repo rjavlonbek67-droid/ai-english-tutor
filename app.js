@@ -229,6 +229,52 @@ function setAvatarState(state) {
 
   statusEl.dataset.state = state;
   statusTextEl.textContent = STATUS_TEXT[state];
+  if (state !== "speaking") stopMouth();
+}
+
+let mouthFrame = 0;
+let mouthBoost = 0;
+let mouthBoostAt = 0;
+let mouthRunning = false;
+
+function setMouth(level) {
+  const next = Math.max(0, Math.min(1, Number(level) || 0));
+  avatarEl.style.setProperty("--mouth", next.toFixed(3));
+}
+
+function stopMouth() {
+  mouthRunning = false;
+  mouthBoost = 0;
+  if (mouthFrame) cancelAnimationFrame(mouthFrame);
+  mouthFrame = 0;
+  setMouth(0);
+}
+
+function startMouth() {
+  if (mouthRunning) return;
+  mouthRunning = true;
+  const tick = (now) => {
+    if (!mouthRunning) return;
+    const since = now - mouthBoostAt;
+    const decay = mouthBoost * Math.exp(-since / 150);
+    let speaking = false;
+    try {
+      speaking = speechOutputSupported() && (window.speechSynthesis.speaking || window.speechSynthesis.pending);
+    } catch {
+      speaking = false;
+    }
+    const cadence = speaking && since > 260 ? 0.16 * (0.5 + 0.5 * Math.sin(now / 170)) : 0;
+    setMouth(Math.min(1, decay + cadence));
+    mouthFrame = requestAnimationFrame(tick);
+  };
+  mouthFrame = requestAnimationFrame(tick);
+}
+
+function nudgeMouth(sample, boundary) {
+  const vowels = (String(sample || "").match(/[aeiouy]/gi) || []).length;
+  mouthBoost = boundary === "word" ? Math.min(1, 0.58 + vowels * 0.12) : Math.min(0.82, 0.36 + vowels * 0.16);
+  mouthBoostAt = performance.now();
+  startMouth();
 }
 
 function clearSequence() {
@@ -407,6 +453,7 @@ function cancelSpeech() {
   } catch {
     // ignore browsers that throw when nothing is queued
   }
+  stopMouth();
 }
 
 /**
@@ -1065,6 +1112,7 @@ async function speakReply(text, lang, serial, options) {
   resumeAfterThisSpeech = false;
   syncStopButton();
   setAvatarState("speaking");
+  startMouth();
   const voices = await ensureVoices();
   if (token !== speechToken || serial !== requestSerial) return;
 
@@ -1109,6 +1157,16 @@ async function speakReply(text, lang, serial, options) {
           utterance.lang = segment.lang;
         }
       }
+      utterance.onstart = () => {
+        if (token !== speechToken) return;
+        nudgeMouth(segment.text.slice(0, 6), "word");
+      };
+      utterance.onboundary = (event) => {
+        if (token !== speechToken) return;
+        const at = event.charIndex || 0;
+        const len = event.charLength || 3;
+        nudgeMouth(segment.text.slice(at, at + Math.max(len, 1)), event.name);
+      };
       utterance.onend = () => {
         if (token !== speechToken) return;
         window.setTimeout(speakNext, 30);
