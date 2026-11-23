@@ -19,7 +19,7 @@ const EMPTY_COPY = {
   user: "Hali gapirmadingiz.",
   analysis: "Maslahat shu yerda chiqadi.",
   reply: "Javob shu yerda chiqadi.",
-  subtitle: "Salom. Gapiring yoki yozing.",
+  subtitle: "Bugun nima haqida gaplashamiz.",
 };
 
 const NOTEBOOK_KEY = "ai-tutor-notebook";
@@ -83,8 +83,9 @@ const TUTOR_MODES = {
 };
 
 const SYSTEM_INSTRUCTION = `You are a real person: a candid, articulate Uzbek-speaking English coach sitting with one learner.
-They may be a complete beginner or an IELTS candidate. They mix Uzbek and English, and they ask things like:
-"Do‘st" ingliz tilida nima deyiladi?
+They may be a complete beginner or an IELTS candidate. They mix Uzbek and English. They say ordinary things, such as kecha do‘stim bilan gaplashdim, or they want a real sentence for a friend.
+
+Never open like a textbook. Do not start a reply with salom qandaysan, salom qandeysan, or a line shaped like X ingliz tilida. Answer the person directly. If they want the English for do‘st, put it in a lived sentence. Do‘st bu friend. Do‘stingni sog‘insang I miss you friend deyasan.
 
 You understand Uzbek accurately, including spoken spelling and code-switching. Treat o‘, o', oʻ, g‘, and g' as normal Uzbek letters. Understand the learner if they use slang. Do not answer with a slang pack, and do not invent catchphrases. Leave the wording clean so a custom phrase list can be added later.
 Write Uzbek the way a sharp, warm person actually talks: open, free, and a little more thoughtful than a slogan. Vary the opening and the shape of the sentence. Explain the shade of meaning in plain words. Do not recycle one correction template. Avoid stiff lines such as "iltimos e'tibor bering", "quyidagi iborani qo'llang", and "demak, xulosa qilsak". Do not translate English word for word.
@@ -118,7 +119,8 @@ spoken_reply:
 - This is said aloud in one even flow. Sound like a person talking, not a bot.
 - Letters, spaces, and periods only. No commas, quotation marks, exclamation marks, question marks, colons, dashes, brackets, or emojis.
 - Write cohesive sentences that carry the thought from start to finish. Join a reason with chunki, shuning uchun, or va. Put a period only where a full stop belongs, then continue.
-- The model English is the same plain words, not wrapped in quotes. Example shape, not a script to copy: Kecha uchun went kerak chunki ish tugagan. To‘g‘ri gap shu. I went to school yesterday. Kecha nima qilding.
+- The model English is the same plain words, not wrapped in quotes. Example shape, not a script to copy: Kecha borib kelgan bo‘lsang went ishlatasan. I went to school yesterday. Kecha nima qilding.
+- Do not begin with salom qandaysan or X ingliz tilida. Start on the useful thought.
 - If nothing was wrong, still answer in full Uzbek words. When you offer English, keep that full sentence as words. Then ask exactly one follow-up by word order.
 - Vary the wording from turn to turn. Match their level with simpler or slightly richer Uzbek. A1 is simpler, not broken. IELTS ends with one complete Speaking question in words.
 - If they ask for a mashq, give one complete spoken task and still end with a question in words.
@@ -853,6 +855,20 @@ function chooseVoice(voices, lang) {
     if (score < 0) return;
     if (/natural|neural|premium|enhanced|google|siri|online/.test(name)) score += 24;
     if (/robot|compact|espeak/.test(name)) score -= 18;
+    if (
+      /\bmale\b|\bman\b|david|daniel|alex\b|fred|mark|james|ryan|george|brian|matthew|andrew|eric|john|paul|rishi|arthur|gordon|ralph|aaron|christopher|oliver|nathan|ahmet|emre|tolga|erkek|erkak|yusuf|mehmet/.test(
+        name
+      )
+    ) {
+      score += 28;
+    }
+    if (
+      /\bfemale\b|\bwoman\b|zira|hazel|samantha|victoria|susan|karen|moira|fiona|tessa|serena|kate|salli|ivy|joanna|kimberly|linda|ayanda|yelda|heather|catherine|allison|jenny|aria|natasha|irina|milena|ayse|ayşe|fatma|zehra|emel|filiz/.test(
+        name
+      )
+    ) {
+      score -= 18;
+    }
     if (voice.localService) score += 2;
     if (score > bestScore) {
       best = voice;
@@ -862,17 +878,12 @@ function chooseVoice(voices, lang) {
   return best;
 }
 
-function chunkProsody(segment, rate) {
-  const even = Math.max(0.85, Math.min(rate, 1.02));
-  return {
-    rate: segment.lang === "en-US" ? Math.min(even, 1) : even,
-    pitch: 1,
-  };
+function chunkProsody() {
+  return { rate: 1, pitch: 0.95 };
 }
 
 function activeSpeechRate() {
-  if (rateChosen) return speechRate;
-  return tutorMode === "beginner" ? 0.85 : 1;
+  return 1;
 }
 
 function finishSpeech(token, serial, reason) {
@@ -1086,22 +1097,14 @@ function setSpeechRate(rate, persist) {
 }
 
 function loadVoicePrefs() {
-  let savedRate = "";
   let savedHands = "";
   try {
-    savedRate = localStorage.getItem(RATE_KEY) || "";
     savedHands = localStorage.getItem(HANDS_FREE_KEY) || "";
   } catch {
-    savedRate = "";
     savedHands = "";
   }
-  if (savedRate === "0.85" || savedRate === "1" || savedRate === "1.15") {
-    speechRate = Number(savedRate);
-    rateChosen = true;
-  } else {
-    speechRate = tutorMode === "beginner" ? 0.85 : 1;
-    rateChosen = false;
-  }
+  speechRate = 1;
+  rateChosen = false;
   handsFree = savedHands !== "0";
   syncRateButtons();
   syncHandsFreeButton();
