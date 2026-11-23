@@ -120,8 +120,9 @@ spoken_reply:
 - Build the thought in order. Open from their words, continue with the reason or the shade of meaning, and land on one practical line they can actually say. Do not skip ahead to the English sentence with no setup, and do not stop on a bare label.
 - Letters, spaces, and periods only. No commas, quotation marks, exclamation marks, question marks, colons, dashes, brackets, or emojis.
 - Put a period only where a sentence is grammatically finished. Do not put one after a fragment or inside a phrase. A second period starts the next finished sentence.
-- Join an unfinished step with chunki, shuning uchun, or va. Do not use formulaic bridges such as demak, xulosa, birinchi, or ikkinchi.
-- Keep Uzbek words in a row and the model English as one uninterrupted run of English words, with no quotation marks. A single English word you are naming, such as went, may stand alone. Example shape, not a script to copy: Kecha haqida gapirsang went kerak chunki ish tugagan va shu gap I went to school yesterday bo‘ladi endi kecha nima qilganingni shu gap bilan aytib ber.
+- Never mix Uzbek and English inside the same sentence. Write one finished Uzbek sentence, then a period, then the English sentence or phrase, then a period, then the next Uzbek sentence, then a period.
+- Join an unfinished Uzbek step with chunki, shuning uchun, or va. Do not use formulaic bridges such as demak, xulosa, birinchi, or ikkinchi.
+- The English sentence is plain words with no quotation marks. Example shape, not a script to copy: Kecha haqida gapirsang ish tugaganini aytasan. I went to school yesterday. Endi kecha nima qilganingni shu gap bilan aytib ber.
 - Do not begin with salom qandaysan or X ingliz tilida. Start on the useful thought.
 - If nothing was wrong, still answer in full Uzbek words. When you offer English, keep that full sentence as words. Then ask exactly one follow-up by word order.
 - Vary the wording from turn to turn. Match their level with simpler or slightly richer Uzbek. A1 is simpler, not broken. IELTS ends with one complete Speaking question in words.
@@ -784,6 +785,20 @@ function segmentLanguages(text) {
     .filter((part) => part.text && part.text !== ".");
 }
 
+/**
+ * One language per sentence. A period closes the Uzbek sentence, then the
+ * English sentence, then the next Uzbek sentence.
+ */
+function languageSentences(text) {
+  return segmentLanguages(text)
+    .map((part) => {
+      const line = part.text.replace(/\.+$/g, "").trim();
+      return line ? `${line}.` : "";
+    })
+    .filter(Boolean)
+    .join(" ");
+}
+
 function splitSentences(text) {
   const parts = [];
   let start = 0;
@@ -859,7 +874,7 @@ function plainWords(value) {
   text = text.replace(/(?:\s*\.\s*)+/g, ". ");
   text = text.replace(/\u0001/g, ".");
   text = text.replace(/^(?:\.\s*)+/, "");
-  return relaxStops(text.replace(/\s+/g, " ").trim());
+  return languageSentences(relaxStops(text.replace(/\s+/g, " ").trim()));
 }
 
 /**
@@ -944,8 +959,11 @@ function chooseVoice(voices, lang) {
       return voiceLang === "uz" || voiceLang.startsWith("uz-") || /uzbek|o‘zbek|ozbek/.test(voiceName(voice));
     });
     if (uz.length) return bestVoice(uz);
-    const near = list.filter((voice) => /^(tr|az|kk|ky|tk)(-|$)/.test(String(voice.lang || "").toLowerCase()));
-    if (near.length) return bestVoice(near);
+    const turkish = list.filter((voice) => {
+      const voiceLang = String(voice.lang || "").toLowerCase();
+      return voiceLang === "tr" || voiceLang.startsWith("tr-");
+    });
+    if (turkish.length) return bestVoice(turkish);
     return null;
   }
   const english = list.filter((voice) => String(voice.lang || "").toLowerCase().startsWith("en"));
