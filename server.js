@@ -158,7 +158,7 @@ async function callGroq(model, messages, key, jsonMode) {
     },
     body: JSON.stringify(payload),
     cache: "no-store",
-    signal: AbortSignal.timeout(25000),
+    signal: AbortSignal.timeout(12000),
   });
   return {
     ok: response.ok,
@@ -182,7 +182,19 @@ function tutorText(attempt) {
     content = "";
   }
   const text = String(content || "").trim();
-  if (!text) return jsonResult(502, "empty-reply");
+  if (!text) {
+    return {
+      status: 200,
+      type: "application/json; charset=utf-8",
+      text: JSON.stringify({
+        text: JSON.stringify({
+          reaction_and_correction: "Kechirasiz bu safar javob to‘liq kelmadi.",
+          spoken_reply: "Kechirasiz bu safar javob to‘liq kelmadi. Gapni yana bir marta ayting.",
+          notebook: [],
+        }),
+      }),
+    };
+  }
   return {
     status: 200,
     type: "application/json; charset=utf-8",

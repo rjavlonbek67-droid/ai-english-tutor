@@ -38,7 +38,8 @@ const MESSAGES = {
   badKey: "API kaliti yaroqsiz yoki muddati o‘tgan. Serverdagi Groq kalitini tekshiring.",
   quota: "Hozir navbat to‘lib qoldi. Bir zum kutib, qayta yubor.",
   network: "Tarmoq xatosi. Internetni tekshirib, qayta urinib ko‘ring.",
-  server: "Gemini serveri hozir javob bermadi. Birozdan so‘ng qayta urinib ko‘ring.",
+  timeout: "Javob kechikdi. Gapni yana bir marta yuboring.",
+  server: "Ustoz hozir javob bermadi. Gapni yana bir marta yuboring.",
   malformed: "Ustoz javobi noto‘g‘ri formatda keldi. Qayta yuborib ko‘ring.",
   noReply: "Ustoz javobi kelmadi.",
   unsupportedMic:
@@ -425,7 +426,12 @@ function speechOutputSupported() {
  */
 function stopListening(options) {
   const submit = Boolean(options && options.submit);
-  if (!micActive && !recognition) return;
+  if (!micActive && !recognition) {
+    holdReleasePending = false;
+    holdingMic = false;
+    document.documentElement.classList.remove("is-holding-mic");
+    return false;
+  }
 
   clearListenTimer();
   listeningGeneration += 1;
@@ -456,7 +462,7 @@ function stopListening(options) {
     }
   }
 
-  if (!submit) return;
+  if (!submit) return false;
   if (!transcript || looksLikeEcho(transcript)) {
     const echoed = Boolean(transcript);
     quietStrikes = 0;
@@ -464,13 +470,14 @@ function stopListening(options) {
     setCard(userCardEl, echoed ? "O‘z javobim eshitildi." : MESSAGES.emptySpeech, false);
     setSubtitle(echoed ? "O‘z javobim eshitildi." : MESSAGES.emptySpeech, false);
     showSpeechNotice(echoed ? "O‘z javobim eshitildi." : MESSAGES.emptySpeech);
-    return;
+    return false;
   }
 
   quietStrikes = 0;
   clearSpeechNotice();
   inputEl.value = transcript;
   formEl.requestSubmit();
+  return true;
 }
 
 function cancelSpeech() {
@@ -724,16 +731,21 @@ function startListening(options) {
 }
 
 function finishHold() {
-  if (!holdingMic || holdReleasePending) return;
+  if (holdReleasePending || !holdingMic) return;
   holdingMic = false;
   holdReleasePending = true;
   document.documentElement.classList.remove("is-holding-mic");
-  const spoken = speechJoin(committedFinal, pendingInterim);
+  const spoken = (speechJoin(committedFinal, pendingInterim) || inputEl.value).trim();
   pendingInterim = "";
   committedFinal = spoken;
   liveTranscript = spoken;
   if (spoken) inputEl.value = spoken;
-  stopListening({ submit: true });
+  const sent = stopListening({ submit: true });
+  if (!sent && spoken && !looksLikeEcho(spoken)) {
+    inputEl.value = spoken;
+    holdReleasePending = false;
+    formEl.requestSubmit();
+  }
 }
 
 function beginHold(event) {
@@ -781,10 +793,23 @@ function bindPushToTalk() {
     event.preventDefault();
     finishHold();
   });
+  const releaseHold = (event) => {
+    if (!holdingMic) return;
+    if (event) event.preventDefault();
+    finishHold();
+  };
+  micBtn.addEventListener("mouseup", releaseHold);
+  micBtn.addEventListener("touchend", releaseHold);
   window.addEventListener("pointerup", () => {
     if (holdingMic) finishHold();
   });
   window.addEventListener("pointercancel", () => {
+    if (holdingMic) finishHold();
+  });
+  window.addEventListener("mouseup", () => {
+    if (holdingMic) finishHold();
+  });
+  window.addEventListener("touchend", () => {
     if (holdingMic) finishHold();
   });
 }
@@ -985,8 +1010,15 @@ function relaxStops(value) {
   return line.endsWith(".") ? line : `${line}.`;
 }
 
+const FALLBACK_SPOKEN = "Kechirasiz bu gapni yana bir marta ayting.";
+
+function ensureSpoken(value) {
+  const clean = plainWords(value);
+  return clean || FALLBACK_SPOKEN;
+}
+
 function prepareSpokenText(text) {
-  return plainWords(text);
+  return ensureSpoken(text);
 }
 
 function voiceName(voice) {
@@ -1515,14 +1547,13 @@ function parseTutorJson(raw, userText) {
 
   const reactionRaw = data?.reaction_and_correction;
   const spokenRaw = data?.spoken_reply;
-  if (typeof reactionRaw !== "string" || typeof spokenRaw !== "string") {
+  if (typeof reactionRaw !== "string" && typeof spokenRaw !== "string") {
     throw tutorError(MESSAGES.malformed);
   }
 
-  const spoken = prepareSpokenText(spokenRaw.trim());
+  const spoken = ensureSpoken(typeof spokenRaw === "string" ? spokenRaw : reactionRaw);
   const { surprise, reaction: reactionText } = splitReaction(reactionRaw, userText);
-  const reaction = dropForbiddenWord(reactionText);
-  if (!reaction || !spoken) throw tutorError(MESSAGES.malformed);
+  const reaction = ensureSpoken(reactionText || spoken);
 
   const notebook = parseNotebook(data, surprise, reaction);
   return {
@@ -1707,17 +1738,19 @@ function rememberTurn(userText, modelText) {
 
 function showFailure(serial, userMessage, restoreText) {
   if (serial !== requestSerial) return;
-  setCard(analysisCardEl, userMessage, false);
-  setCard(replyCardEl, MESSAGES.noReply, false);
-  setSubtitle(userMessage, false);
+  const spoken = ensureSpoken(userMessage);
+  setCard(analysisCardEl, spoken, false);
+  setCard(replyCardEl, spoken, false);
+  setSubtitle(spoken, false);
   if (restoreText) inputEl.value = restoreText;
   setAvatarState("idle");
+  void speakReply(spoken, "uz-UZ", serial, { lively: false });
 }
 
 function presentReply(serial, text, tutor, langAtSend) {
   if (serial !== requestSerial) return;
-  const reaction = plainWords(tutor.reaction);
-  const spoken = plainWords(tutor.spoken);
+  const reaction = ensureSpoken(tutor.reaction);
+  const spoken = ensureSpoken(tutor.spoken);
   setCard(analysisCardEl, reaction, false);
   setCard(replyCardEl, spoken, false);
   setSubtitle(spoken, false);
@@ -1796,6 +1829,11 @@ async function handleSubmit(event) {
   const controller = new AbortController();
   activeRequest = controller;
   const langAtSend = speechLang;
+  let timedOut = false;
+  const timeoutId = window.setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, 30000);
 
   try {
     const tutor = await requestTutorReply({
@@ -1806,9 +1844,14 @@ async function handleSubmit(event) {
     if (serial !== requestSerial) return;
     presentReply(serial, text, tutor, langAtSend);
   } catch (error) {
-    if (error.name === "AbortError" || serial !== requestSerial) return;
+    if (serial !== requestSerial) return;
+    if (error.name === "AbortError") {
+      if (timedOut) showFailure(serial, MESSAGES.timeout, text);
+      return;
+    }
     showFailure(serial, error.userMessage || MESSAGES.network, text);
   } finally {
+    window.clearTimeout(timeoutId);
     if (activeRequest === controller) activeRequest = null;
   }
 }
