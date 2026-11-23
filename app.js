@@ -122,7 +122,7 @@ spoken_reply:
 - Build the thought in order. Open from their words, including a wrong answer, continue with the reason or the shade of meaning, and land on one practical line they can actually say. Do not skip ahead to the English sentence with no setup, and do not stop on a bare label.
 - Letters, spaces, and periods only. No commas, quotation marks, exclamation marks, question marks, colons, dashes, brackets, or emojis.
 - Put a period only where a sentence is grammatically finished. Do not put one after a fragment or inside a phrase. A second period starts the next finished sentence.
-- Never mix Uzbek and English inside the same sentence. Write one finished Uzbek sentence, then a period, then the English sentence or phrase, then a period, then the next Uzbek sentence, then a period.
+- Never mix Uzbek and English inside the same sentence. If both languages appear, close the first language with a period before the other language starts. Write one finished Uzbek sentence, then a period, then the English sentence or phrase, then a period, then the next Uzbek sentence, then a period.
 - Join an unfinished Uzbek step with chunki, shuning uchun, or va. Do not use formulaic bridges such as demak, xulosa, birinchi, or ikkinchi.
 - The English sentence is plain words with no quotation marks. Example shape, not a script to copy: Kecha haqida gapirsang ish tugaganini aytasan. I went to school yesterday. Endi kecha nima qilganingni shu gap bilan aytib ber.
 - Do not begin with salom qandaysan or X ingliz tilida. Start on the useful thought.
@@ -201,7 +201,7 @@ let speechToken = 0;
 let speechArmed = false;
 let handsFree = true;
 let quietStrikes = 0;
-let speechRate = 0.9;
+let speechRate = 0.93;
 let rateChosen = false;
 /** @type {{ text: string, lang: "uz-UZ" | "en-US" } | null} */
 let lastSpoken = null;
@@ -237,63 +237,62 @@ function setAvatarState(state) {
   else if (state !== "speaking") setSticker("calm", true);
 }
 
-const FACE_SPECS = [
-  ["calm", "#ffffff", "#d5e4f5", "open", "soft", ""],
-  ["grin", "#fffdf5", "#f0d48a", "open", "grin", "blush"],
-  ["beam", "#fff8ee", "#f0b429", "shut", "teeth", "blush"],
-  ["squint", "#fff7fb", "#ffb3c9", "shut", "laugh", "blush"],
-  ["sweatlaugh", "#fff7fb", "#ffb3c9", "shut", "laugh", "sweat"],
-  ["joy", "#fff4f8", "#ff9bb5", "shut", "laugh", "tears"],
-  ["rofl", "#fff1f6", "#ff8fab", "shut", "laugh", "tilt"],
-  ["angel", "#f7fbff", "#b9d4ff", "shut", "soft", "halo"],
-  ["melt", "#fff8f2", "#ffc7a3", "sleepy", "soft", "melt"],
-  ["soft", "#ffffff", "#f3c1d3", "open", "soft", "blush"],
-  ["love", "#fff5f8", "#ff9ec4", "heart", "soft", "blush"],
-  ["tearsmile", "#f7fbff", "#b9d4ff", "open", "soft", "tear"],
-  ["kiss", "#fff5f8", "#ffb3d0", "shut", "kiss", "blush"],
-  ["star", "#fffdf2", "#f0d36a", "star", "grin", ""],
-  ["zany", "#f6fff4", "#9adf7a", "wink", "tongue", ""],
-  ["money", "#f4fff6", "#7dcea0", "dollar", "grin", ""],
-  ["hug", "#fff7f2", "#ffc2a8", "shut", "soft", "hug"],
-  ["giggle", "#fff7fb", "#ffb3c9", "open", "flat", "giggle"],
-  ["think", "#f7fbff", "#9dcbff", "up", "flat", "chin"],
-  ["shush", "#f8fafc", "#c5d0dc", "open", "flat", "shush"],
-  ["peek", "#ffffff", "#d5e4f5", "peek", "soft", "peek"],
-  ["salute", "#f4f8ff", "#9db7e8", "open", "flat", "salute"],
-  ["sick", "#f3fff6", "#8fd19a", "sleepy", "wavy", ""],
-  ["vomit", "#f3fff4", "#7dcea0", "shut", "wavy", "vomit"],
-  ["mask", "#f7fbff", "#b9d4ff", "open", "flat", "mask"],
-  ["hot", "#fff1ee", "#ff8d7a", "sleepy", "tongue", "hot"],
-  ["cold", "#f3f8ff", "#8eb6ff", "shut", "wavy", "cold"],
-  ["shake", "#ffffff", "#d5e4f5", "wide", "flat", ""],
-  ["drool", "#f7fbff", "#b9d4ff", "sleepy", "soft", "drool"],
-  ["cowboy", "#fff8ee", "#e2b56a", "open", "grin", "hat"],
-  ["spiral", "#f8f6ff", "#c4b5fd", "spiral", "oh", ""],
-  ["blown", "#fff7ee", "#ffb35c", "wide", "oh", "blown"],
-  ["dizzy", "#f8f6ff", "#c4b5fd", "cross", "wavy", ""],
-  ["woozy", "#f8fff4", "#b7e4a8", "uneven", "wavy", ""],
-  ["monocle", "#f7fbff", "#9dcbff", "open", "flat", "monocle"],
-  ["plead", "#f7fbff", "#b9d4ff", "wide", "soft", "plead"],
-  ["scream", "#fff6f4", "#ffb0a4", "wide", "oh", "scream"],
-  ["huff", "#fff4f2", "#ffb0a4", "open", "flat", "steam"],
-  ["swear", "#fff1ee", "#ff8d7a", "shut", "flat", "scribble"],
-  ["rage", "#ffe8e4", "#ff6b57", "wide", "frown", "steam"],
-  ["angry", "#fff4f2", "#ff8d7a", "open", "frown", "brows"],
-  ["persevere", "#fff6f2", "#ffc2a8", "shut", "flat", "sweat"],
-  ["anxious", "#f4f8ff", "#b9cff0", "wide", "wavy", "sweat"],
-  ["yawn", "#f7fbff", "#c5d7ee", "sleepy", "oh", "yawn"],
-];
+const ROUND_STICKERS = ["joy", "grimace", "monocle", "swear", "bags", "scream"];
 
-const STICKER_ALIAS = { laugh: "joy", explain: "think", sad: "plead" };
-const STICKER_IDS = new Set(FACE_SPECS.map((spec) => spec[0]));
+const STICKER_ALIAS = {
+  calm: "monocle",
+  think: "monocle",
+  explain: "monocle",
+  soft: "monocle",
+  peek: "monocle",
+  salute: "monocle",
+  shush: "monocle",
+  laugh: "joy",
+  grin: "joy",
+  beam: "joy",
+  star: "joy",
+  love: "joy",
+  hug: "joy",
+  squint: "joy",
+  sweatlaugh: "joy",
+  rofl: "joy",
+  angel: "joy",
+  giggle: "joy",
+  kiss: "joy",
+  tearsmile: "joy",
+  angry: "swear",
+  huff: "swear",
+  rage: "swear",
+  persevere: "grimace",
+  zany: "grimace",
+  cowboy: "grimace",
+  sad: "bags",
+  plead: "bags",
+  anxious: "bags",
+  yawn: "bags",
+  melt: "bags",
+  sick: "bags",
+  woozy: "bags",
+  dizzy: "bags",
+  spiral: "bags",
+  hot: "bags",
+  cold: "bags",
+  mask: "bags",
+  vomit: "bags",
+  drool: "bags",
+  blown: "scream",
+  shake: "scream",
+  money: "monocle",
+};
+const STICKER_IDS = new Set(ROUND_STICKERS);
 const MOOD_PALETTES = {
-  firm: ["think", "persevere", "huff", "monocle", "plead", "angry", "grin"],
-  warm: ["soft", "love", "angel", "kiss", "tearsmile", "grin", "hug"],
-  laugh: ["squint", "joy", "rofl", "sweatlaugh", "beam", "giggle"],
-  think: ["think", "monocle", "peek", "salute", "shush"],
-  low: ["plead", "anxious", "tearsmile", "yawn", "melt"],
-  sick: ["sick", "woozy", "dizzy", "spiral", "mask", "cold", "vomit"],
-  calm: ["calm", "soft", "think", "grin", "peek", "salute", "beam"],
+  firm: ["grimace", "swear", "monocle", "scream", "bags"],
+  warm: ["joy", "monocle", "grimace"],
+  laugh: ["joy", "grimace", "scream"],
+  think: ["monocle", "grimace", "bags"],
+  low: ["bags", "grimace", "monocle"],
+  sick: ["bags", "grimace", "scream"],
+  calm: ["monocle", "grimace", "joy"],
 };
 const WORD_MOOD = {
   yaxshi: "grin",
@@ -407,269 +406,113 @@ function svgNode(tag, attrs) {
   return node;
 }
 
-function starPoints(cx, cy, outer, inner) {
-  const points = [];
-  for (let i = 0; i < 10; i += 1) {
-    const radius = i % 2 === 0 ? outer : inner;
-    const angle = -Math.PI / 2 + i * Math.PI / 5;
-    points.push(`${(cx + Math.cos(angle) * radius).toFixed(1)},${(cy + Math.sin(angle) * radius).toFixed(1)}`);
-  }
-  return points.join(" ");
+function roundSticker(id, kids) {
+  const svg = svgNode("svg", { class: "sticker sticker-" + id, viewBox: "0 0 200 200", "aria-hidden": "true" });
+  kids.forEach((node) => svg.appendChild(node));
+  return svg;
 }
 
 function mountStickers() {
   if (stickersReady || !avatarEl) return;
   stickersReady = true;
   avatarEl.querySelectorAll(".sticker").forEach((node) => node.remove());
-  FACE_SPECS.forEach((spec) => avatarEl.appendChild(buildSticker(spec)));
+  ROUND_STICKERS.forEach((id) => avatarEl.appendChild(ROUND_FACE[id]()));
 }
 
-function buildSticker(spec) {
-  const [id, fill, stroke, eyes, mouth, extra] = spec;
-  const svg = svgNode("svg", { class: `sticker sticker-${id}`, viewBox: "0 0 200 200", "aria-hidden": "true" });
-  const root = extra === "tilt" ? svgNode("g", { transform: "rotate(-8 100 108)" }) : svg;
-  if (extra === "tilt") svg.appendChild(root);
-  const add = (node) => root.appendChild(node);
-  add(svgNode("rect", { x: "18", y: "18", width: "164", height: "164", rx: "36", fill, stroke, "stroke-width": "4" }));
-  if (extra === "halo") {
-    add(svgNode("ellipse", { cx: "100", cy: "16", rx: "36", ry: "10", fill: "none", stroke: "#f5c542", "stroke-width": "6" }));
-  }
-  if (extra === "hat") {
-    add(svgNode("path", { d: "M58 70h84l-12-26H70z", fill: "#c9892d" }));
-    add(svgNode("rect", { x: "40", y: "66", width: "120", height: "12", rx: "4", fill: "#8a5a16" }));
-  }
-  if (extra === "brows" || mouth === "frown" || extra === "steam") addBrows(add, "angry");
-  else if (extra === "plead" || extra === "tear" || eyes === "wide" && mouth === "wavy") addBrows(add, "sad");
-  else if (extra === "chin" || extra === "monocle") addBrows(add, "think");
-  addEyes(add, eyes);
-  addMouth(add, mouth);
-  addExtra(add, extra);
-  return svg;
-}
-
-function addBrows(add, kind) {
-  const stroke = kind === "angry" ? "#c2412d" : "#2457c5";
-  if (kind === "angry") {
-    add(svgNode("path", { d: "M58 70l28 14", fill: "none", stroke, "stroke-width": "7", "stroke-linecap": "round" }));
-    add(svgNode("path", { d: "M142 70l-28 14", fill: "none", stroke, "stroke-width": "7", "stroke-linecap": "round" }));
-    return;
-  }
-  if (kind === "sad") {
-    add(svgNode("path", { d: "M58 86c10-12 22-12 30 0", fill: "none", stroke, "stroke-width": "5", "stroke-linecap": "round" }));
-    add(svgNode("path", { d: "M112 86c8-12 20-12 30 0", fill: "none", stroke, "stroke-width": "5", "stroke-linecap": "round" }));
-    return;
-  }
-  add(svgNode("path", { d: "M58 74l26 8", fill: "none", stroke, "stroke-width": "6", "stroke-linecap": "round" }));
-  add(svgNode("path", { d: "M116 78h28", fill: "none", stroke, "stroke-width": "6", "stroke-linecap": "round" }));
-}
-
-function addEyes(add, type) {
-  const left = 76;
-  const right = 124;
-  const y = 96;
-  if (type === "shut") {
-    add(svgNode("path", { d: "M60 96c10 12 22 12 32 0", fill: "none", stroke: "#1b2838", "stroke-width": "6", "stroke-linecap": "round" }));
-    add(svgNode("path", { d: "M108 96c10 12 22 12 32 0", fill: "none", stroke: "#1b2838", "stroke-width": "6", "stroke-linecap": "round" }));
-    return;
-  }
-  if (type === "heart") {
-    [left, right].forEach((cx) => {
-      add(svgNode("path", {
-        d: `M${cx} ${y + 8} C${cx - 16} ${y - 10} ${cx - 8} ${y - 20} ${cx} ${y - 6} C${cx + 8} ${y - 20} ${cx + 16} ${y - 10} ${cx} ${y + 8} Z`,
-        fill: "#e11d48",
-      }));
-    });
-    return;
-  }
-  if (type === "star") {
-    [left, right].forEach((cx) => add(svgNode("polygon", { points: starPoints(cx, y, 14, 6), fill: "#f5b400" })));
-    return;
-  }
-  if (type === "dollar") {
-    [left, right].forEach((cx) => {
-      add(svgNode("circle", { cx, cy: y, r: "14", fill: "#147a3d" }));
-      add(svgNode("path", {
-        d: `M${cx + 4} ${y - 8}c-8-2-12 2-8 6s12 4 8 8-2 8-8 6`,
-        fill: "none",
-        stroke: "#fff",
-        "stroke-width": "3",
-        "stroke-linecap": "round",
-      }));
-    });
-    return;
-  }
-  if (type === "spiral") {
-    [left, right].forEach((cx) => {
-      add(svgNode("path", {
-        d: `M${cx} ${y} m-1 0 a2 2 0 1 1 5 0 a5 5 0 1 1 -10 0 a8 8 0 1 1 16 0`,
-        fill: "none",
-        stroke: "#5b4b8a",
-        "stroke-width": "3",
-      }));
-    });
-    return;
-  }
-  if (type === "cross") {
-    [left, right].forEach((cx) => {
-      add(svgNode("path", { d: `M${cx - 10} ${y - 10}l20 20M${cx + 10} ${y - 10}l-20 20`, fill: "none", stroke: "#5b4b8a", "stroke-width": "5", "stroke-linecap": "round" }));
-    });
-    return;
-  }
-  if (type === "wink") {
-    add(svgNode("path", { d: "M60 96c10 12 22 12 32 0", fill: "none", stroke: "#1b2838", "stroke-width": "6", "stroke-linecap": "round" }));
-    addOpenEye(add, right, y, 12);
-    return;
-  }
-  if (type === "sleepy") {
-    [left, right].forEach((cx) => {
-      add(svgNode("path", { d: `M${cx - 14} ${y} h28`, fill: "none", stroke: "#1b2838", "stroke-width": "6", "stroke-linecap": "round" }));
-      add(svgNode("path", { d: `M${cx - 12} ${y} a12 10 0 0 0 24 0`, fill: "#1d4fbe" }));
-    });
-    return;
-  }
-  if (type === "wide") {
-    [left, right].forEach((cx) => addOpenEye(add, cx, y, 16));
-    return;
-  }
-  if (type === "peek") {
-    add(svgNode("path", { d: "M48 78h40v28H48z", fill: "#1b2838" }));
-    addOpenEye(add, right, y, 12);
-    return;
-  }
-  if (type === "uneven") {
-    addOpenEye(add, left, y - 6, 11);
-    addOpenEye(add, right, y + 8, 14);
-    return;
-  }
-  if (type === "up") {
-    [left, right].forEach((cx) => {
-      add(svgNode("circle", { cx, cy: y, r: "13", fill: "#fff", stroke: "#1d4fbe", "stroke-width": "3" }));
-      add(svgNode("circle", { cx, cy: y - 5, r: "5", fill: "#1d4fbe" }));
-    });
-    return;
-  }
-  [left, right].forEach((cx) => addOpenEye(add, cx, y, 13));
-}
-
-function addOpenEye(add, cx, cy, r) {
-  add(svgNode("circle", { cx, cy, r, fill: "#1d4fbe" }));
-  add(svgNode("circle", { cx: cx + 4, cy: cy - 4, r: "4", fill: "#fff" }));
-}
-
-function addMouth(add, type) {
-  if (type === "grin" || type === "soft") {
-    const drop = type === "grin" ? 18 : 12;
-    add(svgNode("path", { d: `M70 128c16 ${drop} 44 ${drop} 60 0`, fill: "none", stroke: "#1b2838", "stroke-width": "6", "stroke-linecap": "round" }));
-    return;
-  }
-  if (type === "teeth" || type === "laugh") {
-    add(svgNode("path", { d: "M68 118c16 30 48 30 64 0", fill: "#1b2838" }));
-    add(svgNode("rect", { x: "78", y: "124", width: "44", height: "8", fill: "#fff" }));
-    return;
-  }
-  if (type === "frown") {
-    add(svgNode("path", { d: "M72 146c14-18 42-18 56 0", fill: "none", stroke: "#c2412d", "stroke-width": "6", "stroke-linecap": "round" }));
-    return;
-  }
-  if (type === "oh") {
-    add(svgNode("ellipse", { cx: "100", cy: "136", rx: "16", ry: "18", fill: "#1b2838" }));
-    return;
-  }
-  if (type === "kiss") {
-    add(svgNode("circle", { cx: "100", cy: "136", r: "8", fill: "none", stroke: "#e11d48", "stroke-width": "4" }));
-    return;
-  }
-  if (type === "flat") {
-    add(svgNode("path", { d: "M76 136h48", fill: "none", stroke: "#1b2838", "stroke-width": "6", "stroke-linecap": "round" }));
-    return;
-  }
-  if (type === "tongue") {
-    add(svgNode("path", { d: "M74 128c12 10 40 10 52 0", fill: "none", stroke: "#1b2838", "stroke-width": "6", "stroke-linecap": "round" }));
-    add(svgNode("ellipse", { cx: "100", cy: "142", rx: "10", ry: "12", fill: "#ff7a93" }));
-    return;
-  }
-  if (type === "wavy") {
-    add(svgNode("path", { d: "M70 136c10 10 14-10 24 0s14-10 26 0", fill: "none", stroke: "#1b2838", "stroke-width": "6", "stroke-linecap": "round" }));
-  }
-}
-
-function addExtra(add, extra) {
-  if (extra === "blush" || extra === "giggle" || extra === "kiss") {
-    add(svgNode("circle", { cx: "52", cy: "118", r: "8", fill: "#ffb3c9" }));
-    add(svgNode("circle", { cx: "148", cy: "118", r: "8", fill: "#ffb3c9" }));
-  }
-  if (extra === "tear" || extra === "plead") {
-    add(svgNode("path", { d: "M124 112c4 12 4 20 0 28", fill: "none", stroke: "#5aa7ff", "stroke-width": "5", "stroke-linecap": "round" }));
-  }
-  if (extra === "tears") {
-    add(svgNode("path", { d: "M70 108c6 16 6 28 0 40", fill: "none", stroke: "#5aa7ff", "stroke-width": "5", "stroke-linecap": "round" }));
-    add(svgNode("path", { d: "M130 108c6 16 6 28 0 40", fill: "none", stroke: "#5aa7ff", "stroke-width": "5", "stroke-linecap": "round" }));
-  }
-  if (extra === "sweat") {
-    add(svgNode("path", { d: "M146 70c8 10 8 16 0 24c-6-8-6-14 0-24z", fill: "#7ec8ff" }));
-  }
-  if (extra === "melt") {
-    add(svgNode("path", { d: "M40 150c8 18 8 28 0 36M160 146c-8 16-6 28 2 36", fill: "none", stroke: "#ffb089", "stroke-width": "8", "stroke-linecap": "round" }));
-  }
-  if (extra === "mask") {
-    add(svgNode("rect", { x: "58", y: "118", width: "84", height: "36", rx: "16", fill: "#e8eef5", stroke: "#8aa4c8", "stroke-width": "3" }));
-    add(svgNode("path", { d: "M58 132H36M142 132h22", fill: "none", stroke: "#8aa4c8", "stroke-width": "4" }));
-  }
-  if (extra === "hot") {
-    add(svgNode("path", { d: "M148 58c8-14 18-8 12 6", fill: "none", stroke: "#ff6b57", "stroke-width": "4", "stroke-linecap": "round" }));
-  }
-  if (extra === "cold") {
-    add(svgNode("path", { d: "M46 64h16M54 56v16M148 150h14M155 143v14", fill: "none", stroke: "#6aa7ff", "stroke-width": "3" }));
-  }
-  if (extra === "drool") {
-    add(svgNode("path", { d: "M118 142c6 16 4 28-2 36", fill: "none", stroke: "#7ec8ff", "stroke-width": "5", "stroke-linecap": "round" }));
-  }
-  if (extra === "vomit") {
-    add(svgNode("path", { d: "M88 146c8 16 20 22 24 34", fill: "none", stroke: "#67b36a", "stroke-width": "8", "stroke-linecap": "round" }));
-  }
-  if (extra === "steam" || extra === "blown") {
-    add(svgNode("path", { d: "M78 58c6-12 16-8 12 4M112 52c8-14 18-6 10 8", fill: "none", stroke: "#ff8d7a", "stroke-width": "4", "stroke-linecap": "round" }));
-  }
-  if (extra === "scribble") {
-    add(svgNode("path", { d: "M72 128l10 12 8-14 10 16 8-12 10 14", fill: "none", stroke: "#c2412d", "stroke-width": "4", "stroke-linecap": "round" }));
-  }
-  if (extra === "monocle") {
-    add(svgNode("circle", { cx: "124", cy: "96", r: "18", fill: "none", stroke: "#2457c5", "stroke-width": "4" }));
-    add(svgNode("path", { d: "M142 108c10 16 10 28 4 36", fill: "none", stroke: "#2457c5", "stroke-width": "3" }));
-  }
-  if (extra === "shush") {
-    add(svgNode("rect", { x: "118", y: "118", width: "14", height: "36", rx: "7", fill: "#f3c7a8" }));
-  }
-  if (extra === "peek") {
-    add(svgNode("path", { d: "M42 86h52v22H42z", fill: "#f3c7a8" }));
-  }
-  if (extra === "salute") {
-    add(svgNode("path", { d: "M108 78h34", fill: "none", stroke: "#f3c7a8", "stroke-width": "10", "stroke-linecap": "round" }));
-  }
-  if (extra === "hug") {
-    add(svgNode("path", { d: "M36 110c-8 20 8 36 20 28M164 110c8 20-8 36-20 28", fill: "none", stroke: "#f3c7a8", "stroke-width": "10", "stroke-linecap": "round" }));
-  }
-  if (extra === "giggle") {
-    add(svgNode("path", { d: "M78 124c14 16 30 16 44 0v16H78z", fill: "#f3c7a8" }));
-  }
-  if (extra === "chin") {
-    add(svgNode("circle", { cx: "132", cy: "150", r: "10", fill: "#f3c7a8" }));
-  }
-  if (extra === "yawn") {
-    add(svgNode("path", { d: "M126 118c18 8 22 28 8 36", fill: "none", stroke: "#f3c7a8", "stroke-width": "10", "stroke-linecap": "round" }));
-  }
-  if (extra === "scream") {
-    add(svgNode("circle", { cx: "48", cy: "92", r: "12", fill: "#f3c7a8" }));
-    add(svgNode("circle", { cx: "152", cy: "92", r: "12", fill: "#f3c7a8" }));
-  }
-}
+const ROUND_FACE = {
+  joy() {
+    return roundSticker("joy", [
+      svgNode("circle", { cx: "100", cy: "100", r: "90", fill: "#FFCC4D" }),
+      svgNode("circle", { cx: "100", cy: "100", r: "90", fill: "none", stroke: "#F5A623", "stroke-width": "5" }),
+      svgNode("path", { d: "M46 112c10 22 8 40 0 54", fill: "none", stroke: "#5DADEC", "stroke-width": "8", "stroke-linecap": "round" }),
+      svgNode("path", { d: "M154 112c-10 22-8 40 0 54", fill: "none", stroke: "#5DADEC", "stroke-width": "8", "stroke-linecap": "round" }),
+      svgNode("path", { d: "M46 88c16 18 30 18 42 0", fill: "none", stroke: "#6B3E26", "stroke-width": "7", "stroke-linecap": "round" }),
+      svgNode("path", { d: "M112 88c16 18 30 18 42 0", fill: "none", stroke: "#6B3E26", "stroke-width": "7", "stroke-linecap": "round" }),
+      svgNode("path", { d: "M64 116c12 40 60 40 72 0", fill: "#6B3E26" }),
+      svgNode("path", { d: "M78 124h44v12H78z", fill: "#fff" }),
+    ]);
+  },
+  grimace() {
+    return roundSticker("grimace", [
+      svgNode("circle", { cx: "100", cy: "100", r: "90", fill: "#FFCC4D" }),
+      svgNode("circle", { cx: "100", cy: "100", r: "90", fill: "none", stroke: "#F5A623", "stroke-width": "5" }),
+      svgNode("path", { d: "M48 62c14-10 28-4 32 6", fill: "none", stroke: "#6B3E26", "stroke-width": "6", "stroke-linecap": "round" }),
+      svgNode("path", { d: "M120 68c10-8 26-6 34 4", fill: "none", stroke: "#6B3E26", "stroke-width": "6", "stroke-linecap": "round" }),
+      svgNode("ellipse", { cx: "70", cy: "90", rx: "12", ry: "14", fill: "#6B3E26" }),
+      svgNode("ellipse", { cx: "130", cy: "90", rx: "12", ry: "14", fill: "#6B3E26" }),
+      svgNode("circle", { cx: "74", cy: "86", r: "4", fill: "#fff" }),
+      svgNode("circle", { cx: "134", cy: "86", r: "4", fill: "#fff" }),
+      svgNode("rect", { x: "56", y: "118", width: "88", height: "38", rx: "8", fill: "#fff", stroke: "#6B3E26", "stroke-width": "4" }),
+      svgNode("path", { d: "M74 118v38M92 118v38M110 118v38M128 118v38", fill: "none", stroke: "#E7D3C4", "stroke-width": "3" }),
+    ]);
+  },
+  monocle() {
+    return roundSticker("monocle", [
+      svgNode("circle", { cx: "100", cy: "100", r: "90", fill: "#FFCC4D" }),
+      svgNode("circle", { cx: "100", cy: "100", r: "90", fill: "none", stroke: "#F5A623", "stroke-width": "5" }),
+      svgNode("path", { d: "M46 64c16-16 34-8 38 4", fill: "none", stroke: "#6B3E26", "stroke-width": "6", "stroke-linecap": "round" }),
+      svgNode("path", { d: "M116 74h36", fill: "none", stroke: "#6B3E26", "stroke-width": "6", "stroke-linecap": "round" }),
+      svgNode("circle", { cx: "70", cy: "96", r: "10", fill: "#6B3E26" }),
+      svgNode("circle", { cx: "74", cy: "92", r: "3", fill: "#fff" }),
+      svgNode("circle", { cx: "132", cy: "96", r: "9", fill: "#6B3E26" }),
+      svgNode("circle", { cx: "135", cy: "93", r: "3", fill: "#fff" }),
+      svgNode("circle", { cx: "132", cy: "96", r: "22", fill: "none", stroke: "#5C4636", "stroke-width": "5" }),
+      svgNode("path", { d: "M152 108c14 18 10 36 4 52", fill: "none", stroke: "#5C4636", "stroke-width": "3", "stroke-linecap": "round" }),
+      svgNode("path", { d: "M74 136c14 12 38 12 52 0", fill: "none", stroke: "#6B3E26", "stroke-width": "6", "stroke-linecap": "round" }),
+    ]);
+  },
+  swear() {
+    return roundSticker("swear", [
+      svgNode("circle", { cx: "100", cy: "100", r: "90", fill: "#F0483E" }),
+      svgNode("circle", { cx: "100", cy: "100", r: "90", fill: "none", stroke: "#C62828", "stroke-width": "5" }),
+      svgNode("path", { d: "M46 68l34 16", fill: "none", stroke: "#6B1D18", "stroke-width": "8", "stroke-linecap": "round" }),
+      svgNode("path", { d: "M154 68l-34 16", fill: "none", stroke: "#6B1D18", "stroke-width": "8", "stroke-linecap": "round" }),
+      svgNode("circle", { cx: "74", cy: "104", r: "8", fill: "#fff" }),
+      svgNode("circle", { cx: "126", cy: "104", r: "8", fill: "#fff" }),
+      svgNode("circle", { cx: "76", cy: "104", r: "3", fill: "#2A2A2A" }),
+      svgNode("circle", { cx: "128", cy: "104", r: "3", fill: "#2A2A2A" }),
+      svgNode("rect", { x: "58", y: "124", width: "84", height: "32", rx: "8", fill: "#fff" }),
+      svgNode("path", { d: "M70 130v20M82 130v20M66 136h20M66 146h20", fill: "none", stroke: "#2A2A2A", "stroke-width": "3", "stroke-linecap": "round" }),
+      svgNode("circle", { cx: "112", cy: "140", r: "8", fill: "none", stroke: "#2A2A2A", "stroke-width": "3" }),
+      svgNode("path", { d: "M124 132l14 16M138 132l-8 16", fill: "none", stroke: "#2A2A2A", "stroke-width": "3", "stroke-linecap": "round" }),
+    ]);
+  },
+  bags() {
+    return roundSticker("bags", [
+      svgNode("circle", { cx: "100", cy: "100", r: "90", fill: "#FFCC4D" }),
+      svgNode("circle", { cx: "100", cy: "100", r: "90", fill: "none", stroke: "#F5A623", "stroke-width": "5" }),
+      svgNode("path", { d: "M48 78c12 8 24 8 34 0", fill: "none", stroke: "#6B3E26", "stroke-width": "6", "stroke-linecap": "round" }),
+      svgNode("path", { d: "M118 78c12 8 24 8 34 0", fill: "none", stroke: "#6B3E26", "stroke-width": "6", "stroke-linecap": "round" }),
+      svgNode("ellipse", { cx: "68", cy: "98", rx: "14", ry: "10", fill: "#6B3E26" }),
+      svgNode("ellipse", { cx: "132", cy: "98", rx: "14", ry: "10", fill: "#6B3E26" }),
+      svgNode("path", { d: "M52 108c10 14 22 16 32 6", fill: "none", stroke: "#C48A3A", "stroke-width": "6", "stroke-linecap": "round" }),
+      svgNode("path", { d: "M116 108c10 14 22 16 32 6", fill: "none", stroke: "#C48A3A", "stroke-width": "6", "stroke-linecap": "round" }),
+      svgNode("path", { d: "M78 142h44", fill: "none", stroke: "#6B3E26", "stroke-width": "6", "stroke-linecap": "round" }),
+    ]);
+  },
+  scream() {
+    return roundSticker("scream", [
+      svgNode("circle", { cx: "100", cy: "100", r: "90", fill: "#FFCC4D" }),
+      svgNode("circle", { cx: "100", cy: "100", r: "90", fill: "none", stroke: "#F5A623", "stroke-width": "5" }),
+      svgNode("path", { d: "M42 70c8 16 18 16 26 0", fill: "none", stroke: "#6B3E26", "stroke-width": "6", "stroke-linecap": "round" }),
+      svgNode("path", { d: "M132 70c8 16 18 16 26 0", fill: "none", stroke: "#6B3E26", "stroke-width": "6", "stroke-linecap": "round" }),
+      svgNode("ellipse", { cx: "64", cy: "96", rx: "14", ry: "18", fill: "#fff", stroke: "#6B3E26", "stroke-width": "4" }),
+      svgNode("ellipse", { cx: "136", cy: "96", rx: "14", ry: "18", fill: "#fff", stroke: "#6B3E26", "stroke-width": "4" }),
+      svgNode("circle", { cx: "64", cy: "98", r: "6", fill: "#6B3E26" }),
+      svgNode("circle", { cx: "136", cy: "98", r: "6", fill: "#6B3E26" }),
+      svgNode("ellipse", { cx: "100", cy: "142", rx: "22", ry: "26", fill: "#6B3E26" }),
+      svgNode("ellipse", { cx: "48", cy: "118", rx: "14", ry: "10", fill: "#F3C7A8" }),
+      svgNode("ellipse", { cx: "152", cy: "118", rx: "14", ry: "10", fill: "#F3C7A8" }),
+    ]);
+  },
+};
 
 function setSticker(next, force) {
   mountStickers();
   const name = STICKER_ALIAS[next] || next;
   if (!STICKER_IDS.has(name) || !avatarEl) return;
   const now = performance.now();
-  if (!force && name !== stickerName && now - stickerAt < 150) return;
+  if (!force && name !== stickerName && now - stickerAt < 200) return;
   if (name === stickerName) return;
   stickerName = name;
   stickerAt = now;
@@ -741,7 +584,7 @@ function nextSpeechSticker(word, paceFast) {
   const hit = wordMood(word);
   if (hit) return hit;
   const palette = MOOD_PALETTES[speechPalette] || MOOD_PALETTES.calm;
-  if (paceFast) return speechCursor % 2 === 0 ? "huff" : "shake";
+  if (paceFast) return speechCursor % 2 === 0 ? "swear" : "scream";
   speechCursor += 1;
   let pick = palette[speechCursor % palette.length];
   if (pick === stickerName) pick = palette[(speechCursor + 1) % palette.length];
@@ -1326,13 +1169,13 @@ function ensureVoices() {
 }
 
 const UZBEK_WORDS = new Set(
-  `nima deyil deyapsan deyiladi deyasan deyilmaydi boshqacha qanday qandaysan rahmat yaxshi sen men bu mana va chunki shuning uchun yo'q yoq emas qil ayt aytasan ayting aytadi gapir gap ha lekin endi kel kecha bugun ertaga ish tugagan kerak to'g'ri tog'ri to'gri shu yerda bilan deb qilganingni qilding qildim aytib ber do'st dost ingliz tilida tilidan haqida gapirsang bo'ladi boladi bo'lsang bolsang sening mening uning biz siz ular bor ham esa agar unda keyin oldin ichida maktab maktabda do'stim dostim gaplashdim sog'insang soginsang mumkin ishlatasan yana bir qayta takrorla eshit yoz yozing o'qi o'qing ko'r ko'ring tushunarli mayli xo'sh qara hoy gapni shu gap bilan endi nima haqida ishlatasan bo'lgan qilgan keldim keldi bordim bordi aytdim`.split(
+  `nima deyil deyapsan deyiladi deyasan deyilmaydi boshqacha qanday qandaysan rahmat yaxshi sen men bu mana va chunki shuning uchun yo'q yoq emas qil ayt aytasan ayting aytadi gapir gap ha lekin endi kel kecha bugun ertaga ish tugagan kerak to'g'ri tog'ri to'gri shu yerda bilan deb qilganingni qilding qildim aytib ber do'st dost ingliz tilida tilidan haqida gapirsang bo'ladi boladi bo'lsang bolsang sening mening uning biz siz ular bor ham esa agar unda keyin oldin ichida maktab maktabda do'stim dostim gaplashdim sog'insang soginsang mumkin ishlatasan yana bir qayta takrorla eshit yoz yozing o'qi o'qing ko'r ko'ring tushunarli mayli xo'sh qara hoy gapni shu gap bilan endi nima haqida ishlatasan bo'lgan qilgan keldim keldi bordim bordi aytdim kechirasiz qiling tushunding tushundim alohida javob gaplar so'z soz matn xato noto'g'ri notogri qaytadan aytyapman deyapman qilyapman ustoz o'zbek ozbek inglizcha`.split(
     /\s+/
   )
 );
 
 const ENGLISH_WORDS = new Set(
-  `i you he she it we they me him her us them my your his our their a an the to of in on at for with from by as is am are was were be been being do does did have has had will would can could should may might might must not no yes and or but if then so that this these those there here what when where who why how went go going gone school yesterday today tomorrow friend thank thanks please sorry hello good morning night want need like love miss said say says very really just about because before after into over under again now well right wrong english sentence home walked way all yesterday i'm don't doesn't didn't it's that's you're we're they're i've can't won't miss friend`.split(
+  `i you he she it we they me him her us them my your his our their a an the to of in on at for with from by as is am are was were be been being do does did have has had will would can could should may might must not no yes and or but if then so that this these those there here what when where who why how went go going gone school yesterday today tomorrow friend thank thanks please sorry hello good morning night want need like love miss said say says very really just about because before after into over under again now well right wrong english sentence home walked way all i'm don't doesn't didn't it's that's you're we're they're i've can't won't teacher student practice correct classroom water book read write listen family mother father brother sister house time week people name class learn speak welcome goodbye fine better open close help try people really please sorry hello thanks friend school went going yesterday today tomorrow morning evening night sentence words phrase answer question example full natural`.split(
     /\s+/
   )
 );
@@ -1343,11 +1186,18 @@ function foldWord(word) {
     .replace(/[ʻʼ’‘\u2018\u2019\u02BB\u02BC]/g, "'");
 }
 
+function looksUzbek(key) {
+  if (!key) return false;
+  if (UZBEK_WORDS.has(key) || /o'|g'/.test(key)) return true;
+  if (ENGLISH_WORDS.has(key)) return false;
+  return /(moq|gan|ganni|ning|lari|lar|dim|dik|ding|dilar|miz|siz|yman|ysan|adi|ydi|ish|lik|ligi|dan|gacha|chi)$/.test(key);
+}
+
 function tokenLang(token) {
   const key = foldWord(String(token || "").replace(/\.+$/g, ""));
   if (!key) return "";
   if (ENGLISH_WORDS.has(key)) return "en-US";
-  if (UZBEK_WORDS.has(key) || /o'|g'/.test(key)) return "uz-UZ";
+  if (looksUzbek(key)) return "uz-UZ";
   return "";
 }
 
@@ -1358,12 +1208,27 @@ function segmentLanguages(text) {
   const source = String(text || "").trim();
   if (!source) return [];
   const tokens = source.match(/[0-9A-Za-z\u0400-\u04FF\u2018\u2019\u02BB\u02BC']+\.?|\./g) || [];
-  const labels = tokens.map((token) => tokenLang(token));
+  const labels = tokens.map((token) => (token === "." ? "" : tokenLang(token)));
   for (let index = 0; index < labels.length; index += 1) {
-    if (!labels[index] && index > 0) labels[index] = labels[index - 1];
-  }
-  for (let index = labels.length - 1; index >= 0; index -= 1) {
-    if (!labels[index]) labels[index] = index + 1 < labels.length ? labels[index + 1] : "uz-UZ";
+    if (labels[index] || tokens[index] === ".") continue;
+    let prev = "";
+    let next = "";
+    for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
+      if (labels[cursor]) {
+        prev = labels[cursor];
+        break;
+      }
+    }
+    for (let cursor = index + 1; cursor < labels.length; cursor += 1) {
+      if (labels[cursor]) {
+        next = labels[cursor];
+        break;
+      }
+    }
+    if (prev && prev === next) labels[index] = prev;
+    else if (next === "en-US" && prev !== "uz-UZ") labels[index] = "en-US";
+    else if (prev === "en-US" && next !== "uz-UZ") labels[index] = "en-US";
+    else labels[index] = "uz-UZ";
   }
   const parts = [];
   tokens.forEach((token, index) => {
@@ -1591,11 +1456,11 @@ function chooseVoice(voices, lang) {
 }
 
 function chunkProsody() {
-  return { rate: 0.9, pitch: 0.92 };
+  return { rate: 0.93, pitch: 0.95 };
 }
 
 function activeSpeechRate() {
-  return 0.9;
+  return 0.93;
 }
 
 function finishSpeech(token, serial, reason) {
@@ -1731,7 +1596,9 @@ async function speakReply(text, lang, serial, options) {
       };
       utterance.onend = () => {
         if (token !== speechToken) return;
-        window.setTimeout(speakNext, 30);
+        const upcoming = segments[index];
+        const gap = upcoming && upcoming.lang !== segment.lang ? 170 : 55;
+        window.setTimeout(speakNext, gap);
       };
       utterance.onerror = (event) => {
         if (token !== speechToken) return;
@@ -1829,7 +1696,7 @@ function loadVoicePrefs() {
   } catch {
     savedHands = "";
   }
-  speechRate = 0.9;
+  speechRate = 0.93;
   rateChosen = false;
   handsFree = savedHands !== "0";
   syncRateButtons();

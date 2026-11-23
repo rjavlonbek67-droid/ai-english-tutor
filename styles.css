@@ -297,24 +297,12 @@ h1 {
   height: 100%;
   opacity: 0;
   transform: scale(0.96);
-  transition: opacity 280ms ease, transform 280ms ease;
+  transition: opacity 320ms ease, transform 320ms ease;
 }
 
 .avatar .sticker.is-shown {
   opacity: 1;
   transform: scale(1);
-}
-
-@keyframes sticker-shake {
-  0%, 100% { transform: scale(1) translateX(0); }
-  35% { transform: scale(1) translateX(-5px); }
-  70% { transform: scale(1) translateX(5px); }
-}
-
-.avatar[data-sticker="shake"] .sticker.is-shown,
-.avatar[data-sticker="rofl"] .sticker.is-shown,
-.avatar[data-sticker="blown"] .sticker.is-shown {
-  animation: sticker-shake 280ms ease;
 }
 
 .arm {
