@@ -31,7 +31,6 @@ const NOTEBOOK_LIMIT = 40;
 const SURPRISE_MS = 900;
 const VOICE_WAIT_MS = 800;
 const LISTEN_LIMIT_MS = 12000;
-const HANDS_FREE_GAP_MS = 900;
 
 const MESSAGES = {
   missingServerKey: "Serverda GROQ_API_KEY yo‘q. Render sozlamasiga kalitni qo‘ying.",
@@ -241,6 +240,8 @@ function setSubtitle(text, isEmpty) {
 
 function syncMicButton() {
   micBtn.classList.toggle("is-live", micActive);
+  micBtn.classList.toggle("is-holding", holdingMic && micActive);
+  if (!(holdingMic && micActive)) micBtn.classList.remove("is-hearing");
   micBtn.setAttribute("aria-pressed", String(micActive));
   micLabelEl.textContent = micActive ? "Gapiring" : "Mikrofon";
   micBtn.setAttribute(
@@ -366,17 +367,6 @@ function stopListening(options) {
   if (!submit) return;
   if (!transcript || looksLikeEcho(transcript)) {
     const echoed = Boolean(transcript);
-    if (handsFree && quietStrikes < 1) {
-      quietStrikes += 1;
-      setAvatarState("idle");
-      const note = echoed
-        ? "O‘z javobim eshitildi. Yana gapiring."
-        : "Jim. Yana gapiring yoki yozing.";
-      setSubtitle(note, false);
-      showSpeechNotice(note);
-      scheduleLiveListen();
-      return;
-    }
     quietStrikes = 0;
     setAvatarState("idle");
     setCard(userCardEl, echoed ? "O‘z javobim eshitildi." : MESSAGES.emptySpeech, false);
@@ -432,16 +422,6 @@ function recognitionErrorMessage(code) {
   return MESSAGES.micFailed;
 }
 
-function scheduleLiveListen() {
-  clearHandsFreeTimer();
-  if (!handsFree || micActive || speechArmed) return;
-  handsFreeTimer = window.setTimeout(() => {
-    handsFreeTimer = 0;
-    if (!handsFree || micActive || speechArmed) return;
-    startListening();
-  }, HANDS_FREE_GAP_MS);
-}
-
 function normalizeHeard(text) {
   return String(text || "")
     .toLowerCase()
@@ -470,6 +450,7 @@ function publishLiveTranscript(finalText, interimText) {
   setCard(userCardEl, liveTranscript, false);
   setSubtitle(liveTranscript, false);
   statusTextEl.textContent = STATUS_TEXT.listening;
+  if (holdingMic) micBtn.classList.add("is-hearing");
 }
 
 function attachRecognizer(Recognition, generation, hold) {
@@ -843,12 +824,9 @@ function finishSpeech(token, serial, reason) {
   clearSpeechWatchdog();
   speechArmed = false;
   syncStopButton();
-  const resume = reason === "end" && resumeAfterThisSpeech && handsFree;
   resumeAfterThisSpeech = false;
   if (serial !== requestSerial) return;
   setAvatarState("idle");
-  if (!resume) return;
-  scheduleLiveListen();
 }
 
 function watchSpeech(token, serial, maxMs) {
@@ -895,7 +873,6 @@ function watchSpeech(token, serial, maxMs) {
 }
 
 async function speakReply(text, lang, serial, options) {
-  const allowResume = !(options && (options.replay || options.hold));
   const lively = Boolean(options && options.lively);
   const token = ++speechToken;
   lastSpoken = { text, lang, lively };
@@ -905,16 +882,13 @@ async function speakReply(text, lang, serial, options) {
     resumeAfterThisSpeech = false;
     syncStopButton();
     showSpeechNotice(MESSAGES.noTts);
-    if (serial === requestSerial) {
-      setAvatarState("idle");
-      if (handsFree) scheduleLiveListen();
-    }
+    if (serial === requestSerial) setAvatarState("idle");
     return;
   }
 
   if (serial !== requestSerial) return;
   speechArmed = true;
-  resumeAfterThisSpeech = allowResume && handsFree;
+  resumeAfterThisSpeech = false;
   syncStopButton();
   setAvatarState("speaking");
   const voices = await ensureVoices();

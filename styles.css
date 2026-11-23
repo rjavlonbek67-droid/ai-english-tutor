@@ -972,6 +972,43 @@ html.is-holding-mic .mic-btn {
   box-shadow: 0 0 0 4px rgba(93, 222, 196, 0.25);
 }
 
+.mic-btn.is-holding {
+  background: #16a34a;
+  color: #fff;
+  border-color: #0f8a3c;
+  box-shadow: 0 0 0 6px rgba(22, 163, 74, 0.28);
+  animation: mic-bounce 0.72s ease-in-out infinite;
+}
+
+.mic-btn.is-holding.is-hearing {
+  background: #12b981;
+  box-shadow: 0 0 0 8px rgba(18, 185, 129, 0.34);
+  animation: mic-bounce-live 0.36s ease-in-out infinite;
+}
+
+@keyframes mic-bounce {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-6px) scale(1.07);
+  }
+}
+
+@keyframes mic-bounce-live {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  35% {
+    transform: translateY(-9px) scale(1.14);
+  }
+  70% {
+    transform: translateY(-2px) scale(1.05);
+  }
+}
+
 .send-btn {
   background: linear-gradient(180deg, #5b95ff, var(--blue));
   color: #fff;
