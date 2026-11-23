@@ -195,7 +195,8 @@ let lastSpoken = null;
 let listenTimer = 0;
 let holdingMic = false;
 let holdReleasePending = false;
-let heldPrefix = "";
+let committedFinal = "";
+let pendingInterim = "";
 let speechWatchdog = 0;
 let handsFreeTimer = 0;
 let resumeAfterThisSpeech = false;
@@ -253,12 +254,14 @@ function syncMicButton() {
 }
 
 function syncStopButton() {
+  if (!stopSpeechBtn) return;
   stopSpeechBtn.disabled = !speechArmed;
   stopSpeechBtn.classList.toggle("is-live", speechArmed);
   stopSpeechBtn.setAttribute("aria-disabled", String(!speechArmed));
 }
 
 function syncReplayButton() {
+  if (!replayBtn) return;
   const ready = Boolean(lastSpoken && lastSpoken.text);
   replayBtn.disabled = !ready;
   replayBtn.setAttribute("aria-disabled", String(!ready));
@@ -271,6 +274,7 @@ function syncHandsFreeButton() {
 }
 
 function syncRateButtons() {
+  if (!rateGroupEl) return;
   const active = String(speechRate);
   rateGroupEl.querySelectorAll("[data-rate]").forEach((button) => {
     const on = button.dataset.rate === active;
@@ -335,9 +339,10 @@ function stopListening(options) {
 
   clearListenTimer();
   listeningGeneration += 1;
-  const transcript = liveTranscript.trim();
+  const transcript = (committedFinal.trim() || pendingInterim.trim() || liveTranscript.trim());
   liveTranscript = "";
-  heldPrefix = "";
+  committedFinal = "";
+  pendingInterim = "";
   micActive = false;
   holdingMic = false;
   holdReleasePending = false;
@@ -440,14 +445,59 @@ function looksLikeEcho(text) {
   return hits / heardWords.length > 0.72;
 }
 
-function publishLiveTranscript(finalText, interimText) {
-  liveTranscript = `${heldPrefix} ${finalText} ${interimText}`.replace(/\s+/g, " ").trim();
-  if (!liveTranscript) return;
-  inputEl.value = liveTranscript;
-  setCard(userCardEl, liveTranscript, false);
-  setSubtitle(liveTranscript, false);
+function speechJoin(left, right) {
+  return `${left || ""} ${right || ""}`.replace(/\s+/g, " ").trim();
+}
+
+function appendFinalChunk(piece) {
+  const next = String(piece || "").replace(/\s+/g, " ").trim();
+  if (!next) return;
+  const base = committedFinal.trim();
+  if (!base) {
+    committedFinal = next;
+    return;
+  }
+  const baseWords = base.split(" ");
+  const nextWords = next.split(" ");
+  let overlap = 0;
+  const max = Math.min(baseWords.length, nextWords.length);
+  for (let size = max; size > 0; size -= 1) {
+    if (baseWords.slice(-size).join(" ").toLowerCase() === nextWords.slice(0, size).join(" ").toLowerCase()) {
+      overlap = size;
+      break;
+    }
+  }
+  const fresh = nextWords.slice(overlap).join(" ").trim();
+  if (!fresh) return;
+  committedFinal = `${base} ${fresh}`.trim();
+}
+
+function showHeardText() {
+  const shown = speechJoin(committedFinal, pendingInterim);
+  liveTranscript = committedFinal.trim() || pendingInterim.trim();
+  inputEl.value = shown;
+  if (!shown) return;
+  setCard(userCardEl, shown, false);
+  setSubtitle(shown, false);
   statusTextEl.textContent = STATUS_TEXT.listening;
-  if (holdingMic) micBtn.classList.add("is-hearing");
+  if (holdingMic && committedFinal.trim()) micBtn.classList.add("is-hearing");
+}
+
+function absorbResults(event, committedIndexes) {
+  let interim = "";
+  for (let index = 0; index < event.results.length; index += 1) {
+    const result = event.results[index];
+    const piece = result[0]?.transcript || "";
+    if (result.isFinal) {
+      if (committedIndexes.has(index)) continue;
+      committedIndexes.add(index);
+      appendFinalChunk(piece);
+      continue;
+    }
+    if (index >= event.resultIndex) interim = speechJoin(interim, piece);
+  }
+  pendingInterim = interim.trim();
+  showHeardText();
 }
 
 function attachRecognizer(Recognition, generation, hold) {
@@ -463,17 +513,11 @@ function attachRecognizer(Recognition, generation, hold) {
   rec.continuous = hold;
   rec.interimResults = true;
   rec.maxAlternatives = 1;
+  const committedIndexes = new Set();
 
   rec.onresult = (event) => {
     if (generation !== listeningGeneration) return;
-    let finalText = "";
-    let interim = "";
-    for (let i = 0; i < event.results.length; i += 1) {
-      const piece = event.results[i][0]?.transcript || "";
-      if (event.results[i].isFinal) finalText += piece;
-      else interim += piece;
-    }
-    publishLiveTranscript(finalText, interim);
+    absorbResults(event, committedIndexes);
   };
 
   rec.onerror = (event) => {
@@ -499,7 +543,8 @@ function attachRecognizer(Recognition, generation, hold) {
   rec.onend = () => {
     if (generation !== listeningGeneration) return;
     if (hold && holdingMic) {
-      heldPrefix = liveTranscript;
+      pendingInterim = "";
+      showHeardText();
       recognition = null;
       const restart = () => {
         if (!holdingMic || generation !== listeningGeneration) return;
@@ -554,7 +599,8 @@ function startListening(options) {
 
   const generation = ++listeningGeneration;
   liveTranscript = "";
-  heldPrefix = "";
+  committedFinal = "";
+  pendingInterim = "";
   micActive = true;
   syncMicButton();
   setAvatarState("listening");
@@ -1096,8 +1142,9 @@ function readSavedMode() {
 function applyTutorMode(mode, persist) {
   if (!TUTOR_MODES[mode]) return;
   tutorMode = mode;
-  modeHintEl.textContent = TUTOR_MODES[mode].hint;
-  stageModeEl.textContent = TUTOR_MODES[mode].label;
+  if (modeHintEl) modeHintEl.textContent = TUTOR_MODES[mode].hint;
+  if (stageModeEl) stageModeEl.textContent = TUTOR_MODES[mode].label;
+  if (!modeListEl) return;
   modeListEl.querySelectorAll("[data-mode]").forEach((button) => {
     const active = button.dataset.mode === mode;
     button.classList.toggle("is-active", active);
@@ -1332,6 +1379,7 @@ function writeNotebook(items) {
 }
 
 function renderNotebook() {
+  if (!notebookListEl || !notebookEmptyEl) return;
   const items = readNotebook();
   notebookListEl.replaceChildren();
   notebookEmptyEl.hidden = items.length > 0;
@@ -1351,6 +1399,7 @@ function renderNotebook() {
 }
 
 function saveNotebookEntries(entries) {
+  return;
   if (!entries || !entries.length) return;
   try {
     const current = readNotebook();
@@ -1550,25 +1599,25 @@ function handleModeClick(event) {
 
 function init() {
   document.documentElement.dataset.speechLang = speechLang;
-  langBtn.setAttribute("aria-label", "Til: uz-UZ. en-US ga o‘tish");
 
   applyTutorMode(readSavedMode(), false);
   loadVoicePrefs();
   setAvatarState("idle");
   syncStopButton();
   syncReplayButton();
-  renderNotebook();
   micBtn.setAttribute("aria-label", "Bosib turing va gapiring");
   if (speechOutputSupported()) window.speechSynthesis.getVoices();
   void detectChatMode();
 
-  modeListEl.addEventListener("click", handleModeClick);
-  rateGroupEl.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-rate]");
-    if (!button) return;
-    setSpeechRate(button.dataset.rate, true);
-  });
-  replayBtn.addEventListener("click", replaySpeech);
+  if (modeListEl) modeListEl.addEventListener("click", handleModeClick);
+  if (rateGroupEl) {
+    rateGroupEl.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-rate]");
+      if (!button) return;
+      setSpeechRate(button.dataset.rate, true);
+    });
+  }
+  if (replayBtn) replayBtn.addEventListener("click", replaySpeech);
   formEl.addEventListener("submit", handleSubmit);
   inputEl.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" || event.shiftKey) return;
@@ -1576,9 +1625,9 @@ function init() {
     formEl.requestSubmit();
   });
   bindPushToTalk();
-  stopSpeechBtn.addEventListener("click", stopSpeaking);
-  langBtn.addEventListener("click", toggleLanguage);
-  notebookClearEl.addEventListener("click", clearNotebook);
+  if (stopSpeechBtn) stopSpeechBtn.addEventListener("click", stopSpeaking);
+  if (langBtn) langBtn.addEventListener("click", toggleLanguage);
+  if (notebookClearEl) notebookClearEl.addEventListener("click", clearNotebook);
 }
 
 init();

@@ -17,10 +17,6 @@
             <h1>AI Ingliz tili ustozi</h1>
           </div>
         </div>
-        <button id="lang-toggle" class="lang-toggle" type="button" aria-pressed="false">
-          <span class="lang-kicker">Tanish</span>
-          <span id="lang-value">uz-UZ</span>
-        </button>
       </header>
 
       <main class="layout">
@@ -75,9 +71,6 @@
               <span class="status-bars" aria-hidden="true"><i></i><i></i><i></i></span>
               <span id="status-text">Kutmoqda</span>
             </p>
-            <button id="stop-speech" class="stop-speech" type="button" disabled>
-              Ovozni to‘xtatish
-            </button>
           </div>
         </section>
 
@@ -89,29 +82,7 @@
             </div>
           </div>
 
-        <div class="voice-bar" aria-label="Ovoz boshqaruvi">
-          <div class="rate-group" role="radiogroup" aria-label="Ovoz tezligi">
-            <button type="button" role="radio" data-rate="0.85" aria-checked="false">Sekin</button>
-            <button type="button" role="radio" data-rate="1" aria-checked="true">Oddiy</button>
-            <button type="button" role="radio" data-rate="1.15" aria-checked="false">Tez</button>
-          </div>
-          <button id="replay-speech" class="replay-speech" type="button" disabled>Qayta eshitish</button>
-        </div>
-
         <p id="speech-notice" class="speech-notice" aria-live="polite"></p>
-
-        <section class="modes" aria-labelledby="modes-title">
-          <div class="modes-head">
-            <h2 id="modes-title">Shaxsiy ustoz rejimi</h2>
-            <p id="mode-hint">Oddiy gaplar, asosiy so‘zlar, sabrli izoh.</p>
-          </div>
-          <div id="mode-list" class="mode-list" role="radiogroup" aria-label="O‘qish rejimi">
-            <button type="button" role="radio" data-mode="beginner" aria-checked="true">Noldan (A1–A2)</button>
-            <button type="button" role="radio" data-mode="conversation" aria-checked="false">Jonli Muloqot (B1–B2)</button>
-            <button type="button" role="radio" data-mode="advanced" aria-checked="false">Mukammal / Advanced (C1)</button>
-            <button type="button" role="radio" data-mode="ielts" aria-checked="false">IELTS Tayyorgarlik (Band 6.5–8.5+)</button>
-          </div>
-        </section>
 
         <form id="composer" class="composer">
           <button id="mic-btn" class="mic-btn" type="button" aria-pressed="false">
@@ -148,15 +119,6 @@
             <h2>Ustoz javobi</h2>
             <p id="card-reply" class="card-body is-empty">Javob shu yerda chiqadi.</p>
           </article>
-        </section>
-
-        <section class="notebook" aria-labelledby="notebook-title">
-          <div class="notebook-head">
-            <h2 id="notebook-title">Xatolar va so‘zlar</h2>
-            <button id="notebook-clear" type="button">Tozalash</button>
-          </div>
-          <p id="notebook-empty" class="notebook-empty">Hali saqlangan xato yoki so‘z yo‘q.</p>
-          <ul id="notebook-list" class="notebook-list"></ul>
         </section>
         </section>
       </main>
