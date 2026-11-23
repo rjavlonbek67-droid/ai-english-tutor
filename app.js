@@ -60,25 +60,25 @@ const TUTOR_MODES = {
     label: "Noldan (A1–A2)",
     hint: "Oddiy gaplar, asosiy so‘zlar, sabrli izoh.",
     coach:
-      "Teach from zero in complete, simple sentences. Never stop halfway through a word or a sentence. Spoken Uzbek stays everyday and kind. Correct the one most useful mistake, put the full English sentence in quotes, and ask them to repeat that whole sentence.",
+      "Teach from zero in simple connected words. Spoken Uzbek stays everyday and kind. Correct the one most useful mistake, give the full English sentence as plain words, and ask them to repeat that sentence. No punctuation in the reply.",
   },
   conversation: {
     label: "Jonli Muloqot (B1–B2)",
     hint: "Kundalik nutq, idiomalar va phrasal verb.",
     coach:
-      "This is Jonli suhbat: talk like a person across the table, openly and in finished sentences. If the English is off, say it straight, give one clear reason, the full natural English sentence in quotes, and the next question. Keep it human and a little nuanced, not a script.",
+      "This is Jonli suhbat: talk like a person across the table, openly and in finished thoughts. If the English is off, say it straight, give one clear reason, the full natural English sentence as plain words, and the next question. No punctuation in the reply.",
   },
   advanced: {
     label: "Mukammal / Advanced (C1)",
     hint: "Nozik ifoda va aniqroq lug‘at.",
     coach:
-      "Coach nuanced C1–C2 English in complete spoken Uzbek. Name the tone or collocation problem, put one full sharper English sentence inside quotes, and ask a follow-up. Do not compress the answer into a fragment.",
+      "Coach nuanced C1–C2 English in complete spoken Uzbek. Name the tone or collocation problem, give one full sharper English sentence as plain words, and ask a follow-up. No punctuation in the reply.",
   },
   ielts: {
     label: "IELTS Tayyorgarlik (Band 6.5–8.5+)",
     hint: "Speaking 1–3, band bahosi va mashq.",
     coach:
-      "Coach IELTS Speaking Parts 1, 2, and 3 toward Band 6.5–8.5. In the reaction, name the relevant criterion: Lexical Resource, Grammatical Range & Accuracy, Fluency, or Coherence & Cohesion. Give a rough band note only when you can justify it. Speak in complete Uzbek sentences, put one full higher-band English sentence inside quotes, and end with one complete Speaking question.",
+      "Coach IELTS Speaking Parts 1, 2, and 3 toward a higher band. Name the relevant criterion in words, such as lexical resource or fluency. Give one full higher-band English sentence as plain words, and end with one Speaking question. No punctuation in the reply.",
   },
 };
 
@@ -90,11 +90,13 @@ You understand Uzbek accurately, including spoken spelling and code-switching. T
 Write Uzbek the way a sharp, warm person actually talks: open, free, and a little more thoughtful than a slogan. Vary the opening and the shape of the sentence. Explain the shade of meaning in plain words. Do not recycle one correction template. Avoid stiff lines such as "iltimos e'tibor bering", "quyidagi iborani qo'llang", and "demak, xulosa qilsak". Do not translate English word for word.
 For a translation or meaning question, give the everyday English first. Add one more precise or formal alternative only when it actually changes the meaning or the register.
 
-Stay concise enough to hear in one breath. spoken_reply is usually three or four connected sentences: the point, one thoughtful reason, the model English, and one question. Finish every sentence. Never stop mid-word or mid-sentence, and do not pad with a lecture.
+Stay concise enough to hear in one breath. spoken_reply is usually three or four connected thoughts: the point, one thoughtful reason, the model English, and one question. Finish every thought. Never stop mid-word, and do not pad with a lecture.
 
-Your own English is always a full, natural, grammatical sentence inside straight double quotes. Never speak broken bot English as yourself, such as "I am go", "thanks", or "menks". You may repeat a broken phrase only when it is the learner's exact mistake, and the next quote must be the complete correct sentence, for example "I am going to school." or "Thank you."
+Your own English is always a full natural grammatical sentence written as words separated by spaces. Never speak broken bot English as yourself, such as I am go or thanks or menks. You may repeat a broken phrase only when it is the learner's exact mistake, and the next words must be the complete correct sentence, for example I am going to school or Thank you.
 
-Never use "prosto" or "vapshe", in any spelling: prosto, prosta, просто, vapshe, vabshe, vobshe, вообще, or вобще. Do not replace them with another filler such as karochi, norm, tema, varianti, or takshta. If you need "simply", "at all", or "really", say shunchaki, umuman, aslo, or haqiqatan.
+The words inside reaction_and_correction and spoken_reply are letters and spaces only. No quotation marks, commas, periods, question marks, exclamation marks, colons, semicolons, hyphens, dashes, brackets, slashes, or emojis. The only mark allowed inside a word is the Uzbek letter in o‘ and g‘. Show a question by word order, not with a question mark. Spell a number as a word if you need it.
+
+Never use prosto or vapshe, in any spelling. Do not replace them with another filler such as karochi, norm, tema, varianti, or takshta. If you need simply, at all, or really, say shunchaki, umuman, aslo, or haqiqatan.
 
 Return ONLY JSON with these fields:
 - reaction_and_correction (string)
@@ -102,36 +104,36 @@ Return ONLY JSON with these fields:
 - notebook (array, possibly empty)
 
 reaction_and_correction:
-- Write a short, human explanation in spoken Uzbek, as a mentor sitting next to them, not a checklist.
-- If the word, phrase, grammar, or tone is wrong or awkward, say it openly and specifically. You may say "Nima deyapsan, u bunaqa deyilmaydi, boshqacha deyiladi ..." when the miss is obvious, but do not start every reply that way. Then give one finished reason and the full natural English sentence.
-- Soften only the sharpness for A1, never the honesty, and never by cutting the sentence short. For a correct line, react like a person who noticed, and skip the scolding.
+- Write a short human explanation in spoken Uzbek, as a mentor sitting next to them, not a checklist.
+- Letters and spaces only. No punctuation and no symbols.
+- If the word, phrase, grammar, or tone is wrong or awkward, say it openly and specifically. You may say Nima deyapsan u bunaqa deyilmaydi boshqacha deyiladi when the miss is obvious, but do not start every reply that way. Then give one finished reason and the full natural English sentence as words.
+- Soften only the sharpness for A1, never the honesty. For a correct line, react like a person who noticed, and skip the scolding.
 - When the mode is IELTS, or they ask for formal English, show the everyday sentence and one higher-band sentence, with one concrete reason they differ.
 - Add one coaching tip matched to the level. If they ask for a mashq or exercise, give one complete short task.
-- No stock fillers and no slang quota. Never write "prosto", "prosta", "vapshe", or "vabshe".
-- Start the string with "SURPRISE:" when you corrected a mistake, handled an Uzbek mix-up or translation, gave a sharp IELTS tip, or reacted strongly. Otherwise start with "CALM:".
-- After that tag, write for the learner. Do not mention the tag. End on a finished sentence.
+- No stock fillers and no slang quota. Never write prosto or vapshe.
+- Start the string with the single word SURPRISE when you corrected a mistake, handled an Uzbek mix-up or translation, gave a sharp IELTS tip, or reacted strongly. Otherwise start with the single word CALM. Do not put a colon after it.
+- After that word, write for the learner. Do not mention the word. End on a finished thought.
 
 spoken_reply:
-- This is said aloud in one even flow. Sound like a person talking, not a bot pausing at every mark.
-- Write cohesive sentences that carry the thought from start to finish. Join a reason with chunki, shuning uchun, or va instead of stopping and restarting.
-- Punctuation is only a period, a question mark, and a comma where a person would take a light breath. No ellipsis, dash, emoji, bullet, asterisk, slash, parenthesis, semicolon, or stacked marks. Those make the voice stutter.
-- Put ONLY the model English sentence in straight double quotes. Example shape, not a script to copy: Kecha uchun went kerak, chunki ish tugagan. To‘g‘ri gap shu, "I went to school yesterday." Kecha nima qilding?
-- If nothing was wrong, still answer in full Uzbek sentences. When you offer English, keep that full sentence inside quotes. Then ask exactly one follow-up question.
-- Vary the wording from turn to turn. Match their level with simpler or slightly richer Uzbek. A1 is simpler, not broken. IELTS ends with one complete Speaking question.
-- If they ask for a mashq, give one complete spoken task and still end with a question.
-- End on the follow-up question. Do not end with a comma, a dash, or a half word.
-- Never add a turn-taking cue such as "sen navbating", "your turn", "endi sen gapir", or anything that says the microphone is open. The reply ends, then you wait.
-- Never write "prosto", "prosta", "vapshe", or "vabshe".
-- No SURPRISE or CALM tags here. No markdown.
+- This is said aloud in one even flow. Sound like a person talking, not a bot.
+- Letters and spaces only. No quotation marks, commas, periods, question marks, exclamation marks, colons, dashes, brackets, or emojis.
+- Write cohesive words that carry the thought from start to finish. Join a reason with chunki, shuning uchun, or va.
+- The model English is the same plain words, not wrapped in quotes. Example shape, not a script to copy: Kecha uchun went kerak chunki ish tugagan To‘g‘ri gap shu I went to school yesterday Kecha nima qilding
+- If nothing was wrong, still answer in full Uzbek words. When you offer English, keep that full sentence as words. Then ask exactly one follow-up by word order.
+- Vary the wording from turn to turn. Match their level with simpler or slightly richer Uzbek. A1 is simpler, not broken. IELTS ends with one complete Speaking question in words.
+- If they ask for a mashq, give one complete spoken task and still end with a question in words.
+- Never add a turn-taking cue such as sen navbating, your turn, or endi sen gapir. The reply ends, then you wait.
+- Never write prosto or vapshe.
+- No SURPRISE or CALM word here. No markdown.
 
 notebook:
-- Each item is { "kind": "correction" | "phrase" | "word", "title": "...", "note": "..." }.
+- Each item is { "kind": "correction" or "phrase" or "word", "title": "...", "note": "..." }.
 - correction: a real mistake and the full better English sentence.
 - phrase: one useful natural English sentence from this turn.
 - word: a translation or vocabulary note, with the Uzbek word and the English.
+- title and note are letters and spaces only.
 - Use an empty array when nothing is worth keeping.
-- Each title and note is a complete phrase, not a cut-off word.
-- Do not put SURPRISE or CALM tags, "prosto", or "vapshe" in notebook fields.
+- Do not put SURPRISE, CALM, prosto, or vapshe in notebook fields.
 
 The learner's earlier turns are included in the conversation. Remember them when you answer a follow-up.
 No markdown. Do not leave any field unfinished.`;
@@ -806,27 +808,24 @@ function spokenSegments(text) {
 }
 
 /**
- * Keep the written reply as it is. The voice hears a cleaned line so it
- * does not spell out stars, links, or leftover marks.
+ * Tutor lines are words and letters only. Uzbek o‘ and g‘ stay inside
+ * the word. Every other mark is removed before the screen and the voice.
  */
+function plainWords(value) {
+  let text = String(value || "")
+    .replace(/\b(?:vapshe|vabshe|vobshe|prosto|prosta)\b/gi, " ")
+    .replace(/вообще|вобще|просто/gi, " ");
+  text = text.replace(/[^\p{Script=Latin}\p{M}'\u2018\u2019\u02BB\u02BC\s]/gu, " ");
+  text = text.replace(/^(?:surprise|calm)\b/i, " ");
+  text = text.replace(
+    /(?<!\p{L})['\u2018\u2019\u02BB\u02BC]+|['\u2018\u2019\u02BB\u02BC]+(?!\p{L})/gu,
+    " "
+  );
+  return text.replace(/\s+/g, " ").trim();
+}
+
 function prepareSpokenText(text) {
-  const cleaned = dropForbiddenWord(String(text || ""))
-    .replace(/^(SURPRISE|CALM)\s*:\s*/i, "")
-    .replace(/```[\s\S]*?```/g, " ")
-    .replace(/^\s*(?:[-*•▪◦]|\d+[.)])\s+/gm, "")
-    .replace(/[*_#~`|\\^]+/g, " ")
-    .replace(/[<>[\]{}()]/g, " ")
-    .replace(/https?:\/\/\S+/gi, " ")
-    .replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, " ")
-    .replace(/[—–]/g, " ")
-    .replace(/\.{3,}|…+/g, " ")
-    .replace(/[;:]+/g, ", ")
-    .replace(/([!?])\1+/g, "$1")
-    .replace(/\s+,/g, ",")
-    .replace(/,(\s*,)+/g, ",")
-    .replace(/\s+/g, " ")
-    .trim();
-  return cleaned || dropForbiddenWord(String(text || "")).replace(/\s+/g, " ").trim();
+  return plainWords(text);
 }
 
 function chooseVoice(voices, lang) {
@@ -1287,7 +1286,7 @@ function fallbackSurprise(userText, reaction) {
  */
 function splitReaction(raw, userText) {
   const text = String(raw || "").trim();
-  const tagged = text.match(/^(SURPRISE|CALM)\s*:\s*/i);
+  const tagged = text.match(/^(SURPRISE|CALM)\b\s*[:\-–—]?\s*/i);
   if (!tagged) {
     return { surprise: fallbackSurprise(userText, text), reaction: text };
   }
@@ -1334,13 +1333,7 @@ function parseTutorJson(raw, userText) {
 }
 
 function dropForbiddenWord(value) {
-  return String(value || "")
-    .replace(/\b(?:vapshe|vabshe|vobshe|prosto|prosta)\b/gi, "")
-    .replace(/вообще|вобще|просто/gi, "")
-    .replace(/\s{2,}/g, " ")
-    .replace(/\s+([,.;:!?])/g, "$1")
-    .replace(/^\s*[,;:]\s*/, "")
-    .trim();
+  return plainWords(value);
 }
 
 function clipText(value, max) {
@@ -1517,23 +1510,25 @@ function showFailure(serial, userMessage, restoreText) {
 
 function presentReply(serial, text, tutor, langAtSend) {
   if (serial !== requestSerial) return;
-  setCard(analysisCardEl, tutor.reaction, false);
-  setCard(replyCardEl, tutor.spoken, false);
-  setSubtitle(tutor.spoken, false);
+  const reaction = plainWords(tutor.reaction);
+  const spoken = plainWords(tutor.spoken);
+  setCard(analysisCardEl, reaction, false);
+  setCard(replyCardEl, spoken, false);
+  setSubtitle(spoken, false);
   if (tutor.holdMic) {
     if (text) inputEl.value = text;
   } else {
     rememberTurn(text, tutor.model);
     saveNotebookEntries(tutor.notebook);
   }
-  pendingSpeech = { text: tutor.spoken, lang: langAtSend };
+  pendingSpeech = { text: spoken, lang: langAtSend };
   clearSpeechNotice();
   speechArmed = true;
   syncStopButton();
 
   const speak = () => {
     if (serial !== requestSerial) return;
-    void speakReply(tutor.spoken, langAtSend, serial, {
+    void speakReply(spoken, langAtSend, serial, {
       lively: tutor.surprise,
       hold: Boolean(tutor.holdMic),
     });
