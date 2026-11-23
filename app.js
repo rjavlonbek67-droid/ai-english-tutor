@@ -231,12 +231,12 @@ function setAvatarState(state) {
   statusTextEl.textContent = STATUS_TEXT[state];
   if (state !== "speaking") stopMouth();
   if (state === "thinking") setSticker("explain", true);
-  else if (state === "surprised") setSticker("lively", true);
-  else if (state !== "speaking") setSticker("ready", true);
+  else if (state === "surprised") setSticker("angry", true);
+  else if (state !== "speaking") setSticker("calm", true);
 }
 
-const STICKERS = ["ready", "smile", "explain", "lively"];
-let stickerName = "ready";
+const STICKERS = ["calm", "laugh", "angry", "sad", "explain"];
+let stickerName = "calm";
 let stickerAt = 0;
 
 function setSticker(next, force) {
@@ -249,15 +249,14 @@ function setSticker(next, force) {
   avatarEl.dataset.sticker = next;
 }
 
-function stickerForSpeech(sample, lang) {
+function stickerForSpeech(sample, lang, paceFast) {
   const text = String(sample || "").toLowerCase();
-  if (/\b(salom|hello|hey|rahmat|thanks|thank|yaxshi|good|great|wow|do'st|dost)\b/.test(text)) return "smile";
-  if (/\b(nima|deyil|deyapsan|qara|endi|boshqacha|kerak)\b/.test(text)) return "lively";
+  if (paceFast) return "angry";
+  if (/\b(afsus|qiyin|xato|sorry|sad|yomon|yigla|alam|tough)\b/.test(text)) return "sad";
+  if (/\b(kul|haha|ajoyib|zor|yaxshi|great|wow|rahmat|salom|hello|hey|good)\b/.test(text)) return "laugh";
+  if (/\b(yoq|deyil|deyapsan|boshqacha|wrong|stop|emas)\b/.test(text)) return "angry";
   if (lang === "en-US" || /\b(i|you|went|go|school|yesterday|friend|the|is|am|are)\b/.test(text)) return "explain";
-  const vowels = (text.match(/[aeiouy]/g) || []).length;
-  if (vowels >= 3 && text.length < 14) return "lively";
-  if (text.length > 8) return "explain";
-  return "smile";
+  return "calm";
 }
 
 let mouthFrame = 0;
@@ -276,7 +275,7 @@ function stopMouth() {
   if (mouthFrame) cancelAnimationFrame(mouthFrame);
   mouthFrame = 0;
   setMouth(0);
-  setSticker("ready", true);
+  setSticker("calm", true);
 }
 
 function startMouth() {
@@ -300,11 +299,14 @@ function startMouth() {
 }
 
 function nudgeMouth(sample, boundary, lang) {
+  const now = performance.now();
+  const gap = mouthBoostAt ? now - mouthBoostAt : 999;
+  const paceFast = boundary === "word" && gap > 40 && gap < 150;
   const vowels = (String(sample || "").match(/[aeiouy]/gi) || []).length;
   mouthBoost = boundary === "word" ? Math.min(1, 0.58 + vowels * 0.12) : Math.min(0.82, 0.36 + vowels * 0.16);
-  mouthBoostAt = performance.now();
+  mouthBoostAt = now;
   startMouth();
-  setSticker(stickerForSpeech(sample, lang));
+  setSticker(stickerForSpeech(sample, lang, paceFast));
 }
 
 function clearSequence() {
