@@ -193,6 +193,9 @@ let rateChosen = false;
 /** @type {{ text: string, lang: "uz-UZ" | "en-US" } | null} */
 let lastSpoken = null;
 let listenTimer = 0;
+let holdingMic = false;
+let holdReleasePending = false;
+let heldPrefix = "";
 let speechWatchdog = 0;
 let handsFreeTimer = 0;
 let resumeAfterThisSpeech = false;
@@ -239,8 +242,11 @@ function setSubtitle(text, isEmpty) {
 function syncMicButton() {
   micBtn.classList.toggle("is-live", micActive);
   micBtn.setAttribute("aria-pressed", String(micActive));
-  micLabelEl.textContent = micActive ? "To‘xtatish" : "Mikrofon";
-  micBtn.setAttribute("aria-label", micActive ? "Yozishni to‘xtatish" : "Mikrofonni yoqish");
+  micLabelEl.textContent = micActive ? "Gapiring" : "Mikrofon";
+  micBtn.setAttribute(
+    "aria-label",
+    micActive ? "Qo‘yib yuborsangiz yuboriladi" : "Bosib turing va gapiring"
+  );
   inputEl.classList.toggle("is-live", micActive);
 }
 
@@ -333,7 +339,11 @@ function stopListening(options) {
   listeningGeneration += 1;
   const transcript = liveTranscript.trim();
   liveTranscript = "";
+  heldPrefix = "";
   micActive = false;
+  holdingMic = false;
+  holdReleasePending = false;
+  document.documentElement.classList.remove("is-holding-mic");
   syncMicButton();
 
   const rec = recognition;
@@ -453,34 +463,26 @@ function looksLikeEcho(text) {
   return hits / heardWords.length > 0.72;
 }
 
-function startListening() {
-  if (speechArmed) return;
-  unlockSpeech();
-  const Recognition = getRecognitionCtor();
-  if (!Recognition) {
-    beginTurn();
-    setAvatarState("idle");
-    setCard(userCardEl, MESSAGES.unsupportedMic, false);
-    setSubtitle(MESSAGES.unsupportedMic, false);
-    showSpeechNotice(MESSAGES.unsupportedMic);
-    return;
+function publishLiveTranscript(finalText, interimText) {
+  liveTranscript = `${heldPrefix} ${finalText} ${interimText}`.replace(/\s+/g, " ").trim();
+  if (!liveTranscript) return;
+  inputEl.value = liveTranscript;
+  setCard(userCardEl, liveTranscript, false);
+  setSubtitle(liveTranscript, false);
+  statusTextEl.textContent = STATUS_TEXT.listening;
+}
+
+function attachRecognizer(Recognition, generation, hold) {
+  const previous = recognition;
+  if (previous) {
+    previous.onresult = null;
+    previous.onerror = null;
+    previous.onend = null;
   }
-
-  beginTurn();
-  clearSpeechNotice();
-
-  const generation = ++listeningGeneration;
-  liveTranscript = "";
-  micActive = true;
-  syncMicButton();
-  setAvatarState("listening");
-  setCard(userCardEl, MESSAGES.listeningHint, false);
-  setSubtitle(MESSAGES.listeningHint, false);
-
   const rec = new Recognition();
   recognition = rec;
   rec.lang = speechLang;
-  rec.continuous = false;
+  rec.continuous = hold;
   rec.interimResults = true;
   rec.maxAlternatives = 1;
 
@@ -493,18 +495,14 @@ function startListening() {
       if (event.results[i].isFinal) finalText += piece;
       else interim += piece;
     }
-    liveTranscript = `${finalText} ${interim}`.trim();
-    if (!liveTranscript) return;
-    inputEl.value = liveTranscript;
-    setCard(userCardEl, liveTranscript, false);
-    setSubtitle(liveTranscript, false);
-    statusTextEl.textContent = STATUS_TEXT.listening;
+    publishLiveTranscript(finalText, interim);
   };
 
   rec.onerror = (event) => {
     if (generation !== listeningGeneration) return;
     if (event.error === "aborted") return;
-    if (event.error === "no-speech") {
+    if (hold && holdingMic && event.error === "no-speech") return;
+    if (!hold && event.error === "no-speech") {
       stopListening({ submit: true });
       return;
     }
@@ -522,36 +520,171 @@ function startListening() {
 
   rec.onend = () => {
     if (generation !== listeningGeneration) return;
+    if (hold && holdingMic) {
+      heldPrefix = liveTranscript;
+      recognition = null;
+      const restart = () => {
+        if (!holdingMic || generation !== listeningGeneration) return;
+        try {
+          attachRecognizer(Recognition, generation, true);
+        } catch {
+          window.setTimeout(() => {
+            if (!holdingMic || generation !== listeningGeneration) return;
+            try {
+              attachRecognizer(Recognition, generation, true);
+            } catch {
+              stopListening({ submit: Boolean(liveTranscript.trim()) });
+            }
+          }, 80);
+        }
+      };
+      restart();
+      return;
+    }
     stopListening({ submit: true });
   };
 
-  clearListenTimer();
-  listenTimer = window.setTimeout(() => {
-    if (generation !== listeningGeneration) return;
-    stopListening({ submit: true });
-  }, LISTEN_LIMIT_MS);
+  rec.start();
+}
+
+function startListening(options) {
+  const hold = Boolean(options && options.hold);
+  if (hold) {
+    cancelSpeech();
+    clearHandsFreeTimer();
+    resumeAfterThisSpeech = false;
+  } else if (speechArmed) return;
+  unlockSpeech();
+  const Recognition = getRecognitionCtor();
+  if (!Recognition) {
+    holdingMic = false;
+    document.documentElement.classList.remove("is-holding-mic");
+    beginTurn();
+    setAvatarState("idle");
+    setCard(userCardEl, MESSAGES.unsupportedMic, false);
+    setSubtitle(MESSAGES.unsupportedMic, false);
+    showSpeechNotice(MESSAGES.unsupportedMic);
+    return;
+  }
+
+  beginTurn();
+  if (hold) {
+    holdingMic = true;
+    document.documentElement.classList.add("is-holding-mic");
+  }
+  clearSpeechNotice();
+
+  const generation = ++listeningGeneration;
+  liveTranscript = "";
+  heldPrefix = "";
+  micActive = true;
+  syncMicButton();
+  setAvatarState("listening");
+  setCard(userCardEl, MESSAGES.listeningHint, false);
+  setSubtitle(MESSAGES.listeningHint, false);
 
   try {
-    rec.start();
+    attachRecognizer(Recognition, generation, hold);
   } catch {
     clearListenTimer();
     listeningGeneration += 1;
     recognition = null;
     micActive = false;
+    holdingMic = false;
+    document.documentElement.classList.remove("is-holding-mic");
     syncMicButton();
     setAvatarState("idle");
     setCard(userCardEl, MESSAGES.micFailed, false);
     setSubtitle(MESSAGES.micFailed, false);
     showSpeechNotice(MESSAGES.micFailed);
+    return;
   }
+
+  if (hold) return;
+  clearListenTimer();
+  listenTimer = window.setTimeout(() => {
+    if (generation !== listeningGeneration) return;
+    stopListening({ submit: true });
+  }, LISTEN_LIMIT_MS);
 }
 
-function toggleMic() {
-  if (micActive) {
+function finishHold() {
+  if (!holdingMic || holdReleasePending) return;
+  holdingMic = false;
+  holdReleasePending = true;
+  document.documentElement.classList.remove("is-holding-mic");
+  if (!micActive && !recognition) {
+    holdReleasePending = false;
+    return;
+  }
+  const rec = recognition;
+  if (!rec) {
     stopListening({ submit: true });
     return;
   }
-  startListening();
+  try {
+    rec.stop();
+  } catch {
+    stopListening({ submit: true });
+    return;
+  }
+  clearListenTimer();
+  listenTimer = window.setTimeout(() => {
+    if (micActive) stopListening({ submit: true });
+  }, 700);
+}
+
+function beginHold(event) {
+  if (holdingMic) return;
+  if (event && event.button != null && event.button !== 0) return;
+  if (event) event.preventDefault();
+  holdingMic = true;
+  document.documentElement.classList.add("is-holding-mic");
+  if (event && event.pointerId != null && micBtn.setPointerCapture) {
+    try {
+      micBtn.setPointerCapture(event.pointerId);
+    } catch {
+      // Capture can fail if the pointer already ended.
+    }
+  }
+  startListening({ hold: true });
+}
+
+function pointerIsHold() {
+  return holdingMic && !holdReleasePending;
+}
+
+function bindPushToTalk() {
+  micBtn.addEventListener("pointerdown", beginHold);
+  micBtn.addEventListener("pointerup", (event) => {
+    if (!pointerIsHold()) return;
+    event.preventDefault();
+    finishHold();
+  });
+  micBtn.addEventListener("pointercancel", (event) => {
+    if (!holdingMic) return;
+    event.preventDefault();
+    finishHold();
+  });
+  micBtn.addEventListener("contextmenu", (event) => event.preventDefault());
+  micBtn.addEventListener("click", (event) => event.preventDefault());
+  micBtn.addEventListener("keydown", (event) => {
+    if (event.repeat) return;
+    if (event.key !== " " && event.key !== "Enter") return;
+    event.preventDefault();
+    beginHold({ button: 0, preventDefault() {} });
+  });
+  micBtn.addEventListener("keyup", (event) => {
+    if (event.key !== " " && event.key !== "Enter") return;
+    event.preventDefault();
+    finishHold();
+  });
+  window.addEventListener("pointerup", () => {
+    if (holdingMic) finishHold();
+  });
+  window.addEventListener("pointercancel", () => {
+    if (holdingMic) finishHold();
+  });
 }
 
 function ensureVoices() {
@@ -1454,7 +1587,7 @@ function init() {
   syncStopButton();
   syncReplayButton();
   renderNotebook();
-  micBtn.setAttribute("aria-label", "Mikrofonni yoqish");
+  micBtn.setAttribute("aria-label", "Bosib turing va gapiring");
   if (speechOutputSupported()) window.speechSynthesis.getVoices();
   void detectChatMode();
 
@@ -1472,7 +1605,7 @@ function init() {
     event.preventDefault();
     formEl.requestSubmit();
   });
-  micBtn.addEventListener("click", toggleMic);
+  bindPushToTalk();
   stopSpeechBtn.addEventListener("click", stopSpeaking);
   langBtn.addEventListener("click", toggleLanguage);
   notebookClearEl.addEventListener("click", clearNotebook);
