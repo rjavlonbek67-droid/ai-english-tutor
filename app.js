@@ -88,7 +88,7 @@ They may be a complete beginner or an IELTS candidate. They mix Uzbek and Englis
 Never open like a textbook. Do not start a reply with salom qandaysan, salom qandeysan, or a line shaped like X ingliz tilida. Answer the person directly and calmly. If they want the English for do‘st, put it in one lived sentence. Do‘st bu friend va do‘stingni sog‘insang I miss you friend deyasan.
 
 You understand Uzbek accurately, including spoken spelling and code-switching. Treat o‘, o', oʻ, g‘, and g' as normal Uzbek letters. Understand the learner if they use slang. Do not answer with a slang pack, and do not invent catchphrases. Leave the wording clean so a custom phrase list can be added later.
-Write Uzbek the way a sharp, warm person actually talks when a thought is unfolding. Start from what they just said, carry the idea one step further, and land on something they can say or use. Do not jump from a label to a finished answer. Do not announce the steps. Vary the opening and the shape of the sentence. Explain the shade of meaning in plain words. Do not recycle one correction template. Avoid stiff lines such as iltimos e'tibor bering, quyidagi iborani qo'llang, demak xulosa qilsak, birinchi navbatda, and xulosa qilib aytganda. Do not translate English word for word.
+Write idiomatic spoken Uzbek, the way a sharp warm person actually talks, not a word-for-word translation from English. Use ordinary Uzbek word order and real endings. The verb usually sits near the end of the clause. Spell o‘ and g‘ as Uzbek letters. Start from what they just said, carry the idea one step further, and land on something they can say. Do not jump from a label to a finished answer. Do not announce the steps. Vary the opening. Explain the shade of meaning in plain words. Do not recycle one correction template. Avoid stiff lines such as iltimos e'tibor bering, quyidagi iborani qo'llang, demak xulosa qilsak, birinchi navbatda, and xulosa qilib aytganda.
 For a translation or meaning question, give the everyday English first. Add one more precise or formal alternative only when it actually changes the meaning or the register.
 
 Stay concise enough to hear in one calm breath. spoken_reply is usually one flowing sentence, or two when the thought truly turns. Finish the thought. Never stop mid-word, and do not pad with a lecture.
@@ -198,7 +198,7 @@ let speechToken = 0;
 let speechArmed = false;
 let handsFree = true;
 let quietStrikes = 0;
-let speechRate = 0.96;
+let speechRate = 0.9;
 let rateChosen = false;
 /** @type {{ text: string, lang: "uz-UZ" | "en-US" } | null} */
 let lastSpoken = null;
@@ -895,42 +895,69 @@ function prepareSpokenText(text) {
   return plainWords(text);
 }
 
-function chooseVoice(voices, lang) {
-  const uzbek = lang !== "en-US";
+function voiceName(voice) {
+  return `${voice.name || ""} ${voice.voiceURI || ""}`.toLowerCase();
+}
+
+function voiceNaturalScore(voice) {
+  const name = voiceName(voice);
+  let score = 0;
+  if (/natural|neural|premium|enhanced|google|siri|online/.test(name)) score += 24;
+  if (/robot|compact|espeak/.test(name)) score -= 30;
+  if (
+    /\bmale\b|\bman\b|david|daniel|alex\b|fred|mark|james|ryan|george|brian|matthew|andrew|eric|john|paul|rishi|arthur|gordon|ralph|aaron|christopher|oliver|nathan|ahmet|emre|tolga|erkek|erkak|yusuf|mehmet/.test(
+      name
+    )
+  ) {
+    score += 16;
+  }
+  if (
+    /\bfemale\b|\bwoman\b|zira|hazel|samantha|victoria|susan|karen|moira|fiona|tessa|serena|kate|salli|ivy|joanna|kimberly|linda|ayanda|yelda|heather|catherine|allison|jenny|aria|natasha|irina|milena|ayse|ayşe|fatma|zehra|emel|filiz/.test(
+      name
+    )
+  ) {
+    score -= 10;
+  }
+  if (voice.localService) score += 2;
+  return score;
+}
+
+function bestVoice(voices) {
   let best = null;
   let bestScore = -1;
   voices.forEach((voice) => {
+    const score = voiceNaturalScore(voice);
+    if (score > bestScore) {
+      best = voice;
+      bestScore = score;
+    }
+  });
+  return best;
+}
+
+function chooseVoice(voices, lang) {
+  const list = Array.isArray(voices) ? voices : [];
+  const uzbek = lang !== "en-US";
+  if (uzbek) {
+    const uz = list.filter((voice) => {
+      const voiceLang = String(voice.lang || "").toLowerCase();
+      return voiceLang === "uz" || voiceLang.startsWith("uz-") || /uzbek|o‘zbek|ozbek/.test(voiceName(voice));
+    });
+    if (uz.length) return bestVoice(uz);
+    const near = list.filter((voice) => /^(tr|az|kk|ky|tk)(-|$)/.test(String(voice.lang || "").toLowerCase()));
+    if (near.length) return bestVoice(near);
+    return null;
+  }
+  const english = list.filter((voice) => String(voice.lang || "").toLowerCase().startsWith("en"));
+  if (!english.length) return null;
+  let best = null;
+  let bestScore = -1;
+  english.forEach((voice) => {
     const voiceLang = String(voice.lang || "").toLowerCase();
-    const name = `${voice.name || ""} ${voice.voiceURI || ""}`.toLowerCase();
-    let score = -1;
-    if (uzbek) {
-      if (voiceLang === "uz-uz" || voiceLang === "uz-latn-uz" || voiceLang === "uz") score = 100;
-      else if (voiceLang.startsWith("uz")) score = 90;
-      else if (/uzbek|o‘zbek|ozbek/.test(name)) score = 84;
-      else if (voiceLang.startsWith("tr")) score = 46;
-      else if (voiceLang.startsWith("az")) score = 40;
-      else if (voiceLang.startsWith("kk") || voiceLang.startsWith("ky") || voiceLang.startsWith("tk")) score = 32;
-    } else if (voiceLang === "en-us") score = 50;
-    else if (voiceLang === "en-gb") score = 46;
-    else if (voiceLang.startsWith("en")) score = 34;
-    if (score < 0) return;
-    if (/natural|neural|premium|enhanced|google|siri|online/.test(name)) score += 24;
-    if (/robot|compact|espeak/.test(name)) score -= 18;
-    if (
-      /\bmale\b|\bman\b|david|daniel|alex\b|fred|mark|james|ryan|george|brian|matthew|andrew|eric|john|paul|rishi|arthur|gordon|ralph|aaron|christopher|oliver|nathan|ahmet|emre|tolga|erkek|erkak|yusuf|mehmet/.test(
-        name
-      )
-    ) {
-      score += 28;
-    }
-    if (
-      /\bfemale\b|\bwoman\b|zira|hazel|samantha|victoria|susan|karen|moira|fiona|tessa|serena|kate|salli|ivy|joanna|kimberly|linda|ayanda|yelda|heather|catherine|allison|jenny|aria|natasha|irina|milena|ayse|ayşe|fatma|zehra|emel|filiz/.test(
-        name
-      )
-    ) {
-      score -= 18;
-    }
-    if (voice.localService) score += 2;
+    let score = voiceNaturalScore(voice);
+    if (voiceLang === "en-us") score += 20;
+    else if (voiceLang === "en-gb") score += 16;
+    else score += 8;
     if (score > bestScore) {
       best = voice;
       bestScore = score;
@@ -940,11 +967,11 @@ function chooseVoice(voices, lang) {
 }
 
 function chunkProsody() {
-  return { rate: 0.96, pitch: 0.94 };
+  return { rate: 0.9, pitch: 0.92 };
 }
 
 function activeSpeechRate() {
-  return 0.96;
+  return 0.9;
 }
 
 function finishSpeech(token, serial, reason) {
@@ -1164,7 +1191,7 @@ function loadVoicePrefs() {
   } catch {
     savedHands = "";
   }
-  speechRate = 0.96;
+  speechRate = 0.9;
   rateChosen = false;
   handsFree = savedHands !== "0";
   syncRateButtons();
