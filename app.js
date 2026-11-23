@@ -60,25 +60,25 @@ const TUTOR_MODES = {
     label: "Noldan (A1–A2)",
     hint: "Oddiy gaplar, asosiy so‘zlar, sabrli izoh.",
     coach:
-      "Teach from zero in simple connected words. Spoken Uzbek stays everyday and kind. Correct the one most useful mistake, give the full English sentence as plain words, and ask them to repeat that sentence. No punctuation in the reply.",
+      "Teach from zero in simple connected words. Spoken Uzbek stays everyday and kind. Correct the one most useful mistake, give the full English sentence as plain words, and ask them to repeat that sentence. The only punctuation allowed is a period.",
   },
   conversation: {
     label: "Jonli Muloqot (B1–B2)",
     hint: "Kundalik nutq, idiomalar va phrasal verb.",
     coach:
-      "This is Jonli suhbat: talk like a person across the table, openly and in finished thoughts. If the English is off, say it straight, give one clear reason, the full natural English sentence as plain words, and the next question. No punctuation in the reply.",
+      "This is Jonli suhbat: talk like a person across the table, openly and in finished thoughts. If the English is off, say it straight, give one clear reason, the full natural English sentence as plain words, and the next question. The only punctuation allowed is a period.",
   },
   advanced: {
     label: "Mukammal / Advanced (C1)",
     hint: "Nozik ifoda va aniqroq lug‘at.",
     coach:
-      "Coach nuanced C1–C2 English in complete spoken Uzbek. Name the tone or collocation problem, give one full sharper English sentence as plain words, and ask a follow-up. No punctuation in the reply.",
+      "Coach nuanced C1–C2 English in complete spoken Uzbek. Name the tone or collocation problem, give one full sharper English sentence as plain words, and ask a follow-up. The only punctuation allowed is a period.",
   },
   ielts: {
     label: "IELTS Tayyorgarlik (Band 6.5–8.5+)",
     hint: "Speaking 1–3, band bahosi va mashq.",
     coach:
-      "Coach IELTS Speaking Parts 1, 2, and 3 toward a higher band. Name the relevant criterion in words, such as lexical resource or fluency. Give one full higher-band English sentence as plain words, and end with one Speaking question. No punctuation in the reply.",
+      "Coach IELTS Speaking Parts 1, 2, and 3 toward a higher band. Name the relevant criterion in words, such as lexical resource or fluency. Give one full higher-band English sentence as plain words, and end with one Speaking question. The only punctuation allowed is a period.",
   },
 };
 
@@ -92,9 +92,9 @@ For a translation or meaning question, give the everyday English first. Add one 
 
 Stay concise enough to hear in one breath. spoken_reply is usually three or four connected thoughts: the point, one thoughtful reason, the model English, and one question. Finish every thought. Never stop mid-word, and do not pad with a lecture.
 
-Your own English is always a full natural grammatical sentence written as words separated by spaces. Never speak broken bot English as yourself, such as I am go or thanks or menks. You may repeat a broken phrase only when it is the learner's exact mistake, and the next words must be the complete correct sentence, for example I am going to school or Thank you.
+Your own English is always a full natural grammatical sentence. Never speak broken bot English as yourself, such as I am go or thanks or menks. You may repeat a broken phrase only when it is the learner's exact mistake, and the next sentence must be the complete correct one, for example I am going to school. or Thank you.
 
-The words inside reaction_and_correction and spoken_reply are letters and spaces only. No quotation marks, commas, periods, question marks, exclamation marks, colons, semicolons, hyphens, dashes, brackets, slashes, or emojis. The only mark allowed inside a word is the Uzbek letter in o‘ and g‘. Show a question by word order, not with a question mark. Spell a number as a word if you need it.
+The words inside reaction_and_correction and spoken_reply may contain only letters, spaces, and periods. A period ends a finished thought so the voice can move on smoothly. No commas, quotation marks, exclamation marks, question marks, colons, semicolons, hyphens, dashes, brackets, slashes, or emojis. The only mark allowed inside a word is the Uzbek letter in o‘ and g‘. Show a question by word order, then close it with a period.
 
 Never use prosto or vapshe, in any spelling. Do not replace them with another filler such as karochi, norm, tema, varianti, or takshta. If you need simply, at all, or really, say shunchaki, umuman, aslo, or haqiqatan.
 
@@ -105,7 +105,7 @@ Return ONLY JSON with these fields:
 
 reaction_and_correction:
 - Write a short human explanation in spoken Uzbek, as a mentor sitting next to them, not a checklist.
-- Letters and spaces only. No punctuation and no symbols.
+- Letters, spaces, and periods only. No other punctuation and no symbols.
 - If the word, phrase, grammar, or tone is wrong or awkward, say it openly and specifically. You may say Nima deyapsan u bunaqa deyilmaydi boshqacha deyiladi when the miss is obvious, but do not start every reply that way. Then give one finished reason and the full natural English sentence as words.
 - Soften only the sharpness for A1, never the honesty. For a correct line, react like a person who noticed, and skip the scolding.
 - When the mode is IELTS, or they ask for formal English, show the everyday sentence and one higher-band sentence, with one concrete reason they differ.
@@ -116,9 +116,9 @@ reaction_and_correction:
 
 spoken_reply:
 - This is said aloud in one even flow. Sound like a person talking, not a bot.
-- Letters and spaces only. No quotation marks, commas, periods, question marks, exclamation marks, colons, dashes, brackets, or emojis.
-- Write cohesive words that carry the thought from start to finish. Join a reason with chunki, shuning uchun, or va.
-- The model English is the same plain words, not wrapped in quotes. Example shape, not a script to copy: Kecha uchun went kerak chunki ish tugagan To‘g‘ri gap shu I went to school yesterday Kecha nima qilding
+- Letters, spaces, and periods only. No commas, quotation marks, exclamation marks, question marks, colons, dashes, brackets, or emojis.
+- Write cohesive sentences that carry the thought from start to finish. Join a reason with chunki, shuning uchun, or va. Put a period only where a full stop belongs, then continue.
+- The model English is the same plain words, not wrapped in quotes. Example shape, not a script to copy: Kecha uchun went kerak chunki ish tugagan. To‘g‘ri gap shu. I went to school yesterday. Kecha nima qilding.
 - If nothing was wrong, still answer in full Uzbek words. When you offer English, keep that full sentence as words. Then ask exactly one follow-up by word order.
 - Vary the wording from turn to turn. Match their level with simpler or slightly richer Uzbek. A1 is simpler, not broken. IELTS ends with one complete Speaking question in words.
 - If they ask for a mashq, give one complete spoken task and still end with a question in words.
@@ -131,7 +131,7 @@ notebook:
 - correction: a real mistake and the full better English sentence.
 - phrase: one useful natural English sentence from this turn.
 - word: a translation or vocabulary note, with the Uzbek word and the English.
-- title and note are letters and spaces only.
+- title and note are letters, spaces, and periods only.
 - Use an empty array when nothing is worth keeping.
 - Do not put SURPRISE, CALM, prosto, or vapshe in notebook fields.
 
@@ -808,19 +808,24 @@ function spokenSegments(text) {
 }
 
 /**
- * Tutor lines are words and letters only. Uzbek o‘ and g‘ stay inside
- * the word. Every other mark is removed before the screen and the voice.
+ * Tutor lines keep letters, spaces, and periods. Uzbek o‘ and g‘ stay
+ * inside the word. Every other mark is removed before the screen and the voice.
  */
 function plainWords(value) {
   let text = String(value || "")
     .replace(/\b(?:vapshe|vabshe|vobshe|prosto|prosta)\b/gi, " ")
     .replace(/вообще|вобще|просто/gi, " ");
-  text = text.replace(/[^\p{Script=Latin}\p{M}'\u2018\u2019\u02BB\u02BC\s]/gu, " ");
-  text = text.replace(/^(?:surprise|calm)\b/i, " ");
+  text = text.replace(/([oOgG])['\u2018\u2019\u02BB\u02BC]/g, "$1\u2018");
+  text = text.replace(/[^A-Za-z0-9\u0400-\u04FF\u2018\u2019\u02BC\s.]/g, " ");
+  text = text.replace(/^(?:surprise|calm)\b\.?\s*/i, "");
   text = text.replace(
-    /(?<!\p{L})['\u2018\u2019\u02BB\u02BC]+|['\u2018\u2019\u02BB\u02BC]+(?!\p{L})/gu,
+    /(?<![A-Za-z\u0400-\u04FF])[\u2018\u2019\u02BC]+|[\u2018\u2019\u02BC]+(?![A-Za-z\u0400-\u04FF])/g,
     " "
   );
+  text = text.replace(/(\d)\.(\d)/g, "$1\u0001$2");
+  text = text.replace(/(?:\s*\.\s*)+/g, ". ");
+  text = text.replace(/\u0001/g, ".");
+  text = text.replace(/^(?:\.\s*)+/, "");
   return text.replace(/\s+/g, " ").trim();
 }
 
