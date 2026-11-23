@@ -117,6 +117,7 @@ spoken_reply:
 - Vary the wording. Match their level with simpler or richer Uzbek, but every sentence is finished. A1 is simpler, not broken. IELTS ends with one complete Speaking question.
 - If they ask for a mashq, give one complete spoken task and still end with a question.
 - End on the follow-up question. Do not end with a comma, a dash, or a half word.
+- Never add a turn-taking cue such as "sen navbating", "your turn", "endi sen gapir", or anything that says the microphone is open. The reply ends, then you wait.
 - No SURPRISE or CALM tags here. No markdown.
 
 notebook:
@@ -264,13 +265,9 @@ function syncReplayButton() {
 }
 
 function syncHandsFreeButton() {
+  if (!handsFreeBtn) return;
   handsFreeBtn.classList.toggle("is-on", handsFree);
   handsFreeBtn.setAttribute("aria-pressed", String(handsFree));
-  handsFreeBtn.textContent = handsFree ? "Jimjit" : "Jonli suhbat";
-  handsFreeBtn.setAttribute(
-    "aria-label",
-    handsFree ? "Jonli suhbatni to‘xtatish" : "Jonli suhbatni yoqish"
-  );
 }
 
 function syncRateButtons() {
@@ -370,8 +367,8 @@ function stopListening(options) {
     quietStrikes = 0;
     setAvatarState("idle");
     setCard(userCardEl, echoed ? "O‘z javobim eshitildi." : MESSAGES.emptySpeech, false);
-    setSubtitle(echoed ? "O‘z javobim eshitildi. Yana gapiring." : MESSAGES.emptySpeech, false);
-    showSpeechNotice(echoed ? "O‘z javobim eshitildi. Yana gapiring." : MESSAGES.emptySpeech);
+    setSubtitle(echoed ? "O‘z javobim eshitildi." : MESSAGES.emptySpeech, false);
+    showSpeechNotice(echoed ? "O‘z javobim eshitildi." : MESSAGES.emptySpeech);
     return;
   }
 
@@ -1566,7 +1563,6 @@ function init() {
   void detectChatMode();
 
   modeListEl.addEventListener("click", handleModeClick);
-  handsFreeBtn.addEventListener("click", () => setHandsFree(!handsFree, true));
   rateGroupEl.addEventListener("click", (event) => {
     const button = event.target.closest("[data-rate]");
     if (!button) return;
