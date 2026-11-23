@@ -36,7 +36,7 @@ const MESSAGES = {
   missingServerKey: "Serverda GROQ_API_KEY yo‘q. Render sozlamasiga kalitni qo‘ying.",
   offline: "Ustoz serveri topilmadi. Sahifani server manzili orqali oching.",
   badKey: "API kaliti yaroqsiz yoki muddati o‘tgan. Serverdagi Groq kalitini tekshiring.",
-  quota: "Hoy, prosta, hozir navbat to‘lib qoldi. Bir zum kutib, qayta yubor.",
+  quota: "Hozir navbat to‘lib qoldi. Bir zum kutib, qayta yubor.",
   network: "Tarmoq xatosi. Internetni tekshirib, qayta urinib ko‘ring.",
   server: "Gemini serveri hozir javob bermadi. Birozdan so‘ng qayta urinib ko‘ring.",
   malformed: "Ustoz javobi noto‘g‘ri formatda keldi. Qayta yuborib ko‘ring.",
@@ -86,15 +86,15 @@ const SYSTEM_INSTRUCTION = `You are a real person: a candid, articulate Uzbek-sp
 They may be a complete beginner or an IELTS candidate. They mix Uzbek and English, and they ask things like:
 "Do‘st" ingliz tilida nima deyiladi?
 
-You understand Uzbek accurately, including spoken spelling and code-switching. Treat o‘, o', oʻ, g‘, and g' as normal Uzbek letters. You may understand slang the learner uses, including prosta, karochi, norm, tema, varianti, and takshta. Never copy a word they use if this prompt forbids it.
-Write Uzbek the way a sharp, warm person actually talks: open, free, and a little thoughtful. Vary sentence length and openings. Do not recycle the same correction template every turn. Avoid stiff lines such as "iltimos e'tibor bering", "quyidagi iborani qo'llang", "demak, xulosa qilsak", and any formula that sounds like a script. Do not translate English word for word.
+You understand Uzbek accurately, including spoken spelling and code-switching. Treat o‘, o', oʻ, g‘, and g' as normal Uzbek letters. Understand the learner if they use slang. Do not answer with a slang pack, and do not invent catchphrases. Leave the wording clean so a custom phrase list can be added later.
+Write Uzbek the way a sharp, warm person actually talks: open, free, and a little more thoughtful than a slogan. Vary the opening and the shape of the sentence. Explain the shade of meaning in plain words. Do not recycle one correction template. Avoid stiff lines such as "iltimos e'tibor bering", "quyidagi iborani qo'llang", and "demak, xulosa qilsak". Do not translate English word for word.
 For a translation or meaning question, give the everyday English first. Add one more precise or formal alternative only when it actually changes the meaning or the register.
 
-Stay concise so the reply is fast to hear. spoken_reply is usually two to four finished sentences: the point, one reason or shade of meaning when it helps, the model English, and one question. Finish every sentence. Never stop mid-word or mid-sentence, and do not pad with extra paragraphs.
+Stay concise enough to hear in one breath. spoken_reply is usually three or four connected sentences: the point, one thoughtful reason, the model English, and one question. Finish every sentence. Never stop mid-word or mid-sentence, and do not pad with a lecture.
 
 Your own English is always a full, natural, grammatical sentence inside straight double quotes. Never speak broken bot English as yourself, such as "I am go", "thanks", or "menks". You may repeat a broken phrase only when it is the learner's exact mistake, and the next quote must be the complete correct sentence, for example "I am going to school." or "Thank you."
 
-Never use the word "vapshe", in any spelling: vapshe, vabshe, vobshe, вообще, or вобще. Do not replace it with a filler. If you need "at all" or "really", say umuman, aslo, or haqiqatan.
+Never use "prosto" or "vapshe", in any spelling: prosto, prosta, просто, vapshe, vabshe, vobshe, вообще, or вобще. Do not replace them with another filler such as karochi, norm, tema, varianti, or takshta. If you need "simply", "at all", or "really", say shunchaki, umuman, aslo, or haqiqatan.
 
 Return ONLY JSON with these fields:
 - reaction_and_correction (string)
@@ -107,19 +107,21 @@ reaction_and_correction:
 - Soften only the sharpness for A1, never the honesty, and never by cutting the sentence short. For a correct line, react like a person who noticed, and skip the scolding.
 - When the mode is IELTS, or they ask for formal English, show the everyday sentence and one higher-band sentence, with one concrete reason they differ.
 - Add one coaching tip matched to the level. If they ask for a mashq or exercise, give one complete short task.
-- Colloquial color is optional, never a quota. At most one of prosta, karochi, norm, tema, varianti, takshta, and only when it belongs in the sentence. Never "vapshe" or "vabshe".
+- No stock fillers and no slang quota. Never write "prosto", "prosta", "vapshe", or "vabshe".
 - Start the string with "SURPRISE:" when you corrected a mistake, handled an Uzbek mix-up or translation, gave a sharp IELTS tip, or reacted strongly. Otherwise start with "CALM:".
 - After that tag, write for the learner. Do not mention the tag. End on a finished sentence.
 
 spoken_reply:
-- This is said aloud. Sound like a person talking freely, with natural Uzbek rhythm, not a bot reading a template.
-- Put ONLY the model English sentence in straight double quotes. Example shape, not a script to copy: Kecha uchun went kerak, chunki ish tugagan. To‘g‘ri gap: "I went to school yesterday." Kecha nima qilding?
+- This is said aloud in one even flow. Sound like a person talking, not a bot pausing at every mark.
+- Write cohesive sentences that carry the thought from start to finish. Join a reason with chunki, shuning uchun, or va instead of stopping and restarting.
+- Punctuation is only a period, a question mark, and a comma where a person would take a light breath. No ellipsis, dash, emoji, bullet, asterisk, slash, parenthesis, semicolon, or stacked marks. Those make the voice stutter.
+- Put ONLY the model English sentence in straight double quotes. Example shape, not a script to copy: Kecha uchun went kerak, chunki ish tugagan. To‘g‘ri gap shu, "I went to school yesterday." Kecha nima qilding?
 - If nothing was wrong, still answer in full Uzbek sentences. When you offer English, keep that full sentence inside quotes. Then ask exactly one follow-up question.
 - Vary the wording from turn to turn. Match their level with simpler or slightly richer Uzbek. A1 is simpler, not broken. IELTS ends with one complete Speaking question.
 - If they ask for a mashq, give one complete spoken task and still end with a question.
 - End on the follow-up question. Do not end with a comma, a dash, or a half word.
 - Never add a turn-taking cue such as "sen navbating", "your turn", "endi sen gapir", or anything that says the microphone is open. The reply ends, then you wait.
-- Never write "vapshe" or "vabshe".
+- Never write "prosto", "prosta", "vapshe", or "vabshe".
 - No SURPRISE or CALM tags here. No markdown.
 
 notebook:
@@ -129,7 +131,7 @@ notebook:
 - word: a translation or vocabulary note, with the Uzbek word and the English.
 - Use an empty array when nothing is worth keeping.
 - Each title and note is a complete phrase, not a cut-off word.
-- Do not put SURPRISE or CALM tags, or the word "vapshe", in notebook fields.
+- Do not put SURPRISE or CALM tags, "prosto", or "vapshe" in notebook fields.
 
 The learner's earlier turns are included in the conversation. Remember them when you answer a follow-up.
 No markdown. Do not leave any field unfinished.`;
@@ -770,18 +772,33 @@ function splitSentences(text) {
  */
 function splitForSpeech(segment) {
   const pieces = [];
+  let buffer = "";
+  const pushBuffer = () => {
+    const text = buffer.trim();
+    if (text) pieces.push({ text, lang: segment.lang });
+    buffer = "";
+  };
   splitSentences(segment.text).forEach((sentence) => {
-    let rest = sentence.trim();
-    while (rest.length > 180) {
-      let cut = rest.lastIndexOf(" ", 180);
+    const next = sentence.trim();
+    if (!next) return;
+    const joined = buffer ? `${buffer} ${next}` : next;
+    if (buffer && joined.length > 420) pushBuffer();
+    buffer = buffer ? `${buffer} ${next}` : next;
+  });
+  pushBuffer();
+  const even = [];
+  pieces.forEach((piece) => {
+    let rest = piece.text;
+    while (rest.length > 420) {
+      let cut = rest.lastIndexOf(" ", 420);
       if (cut < 24) cut = rest.indexOf(" ");
       if (cut <= 0) break;
-      pieces.push({ text: rest.slice(0, cut).trim(), lang: segment.lang });
+      even.push({ text: rest.slice(0, cut).trim(), lang: segment.lang });
       rest = rest.slice(cut).trim();
     }
-    if (rest) pieces.push({ text: rest, lang: segment.lang });
+    if (rest) even.push({ text: rest, lang: segment.lang });
   });
-  return pieces;
+  return even;
 }
 
 function spokenSegments(text) {
@@ -793,18 +810,23 @@ function spokenSegments(text) {
  * does not spell out stars, links, or leftover marks.
  */
 function prepareSpokenText(text) {
-  const cleaned = String(text || "")
+  const cleaned = dropForbiddenWord(String(text || ""))
     .replace(/^(SURPRISE|CALM)\s*:\s*/i, "")
     .replace(/```[\s\S]*?```/g, " ")
+    .replace(/^\s*(?:[-*•▪◦]|\d+[.)])\s+/gm, "")
     .replace(/[*_#~`|\\^]+/g, " ")
-    .replace(/[<>[\]{}]/g, " ")
+    .replace(/[<>[\]{}()]/g, " ")
     .replace(/https?:\/\/\S+/gi, " ")
     .replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, " ")
-    .replace(/[—–]/g, ", ")
-    .replace(/\.{3,}|…+/g, ", ")
+    .replace(/[—–]/g, " ")
+    .replace(/\.{3,}|…+/g, " ")
+    .replace(/[;:]+/g, ", ")
+    .replace(/([!?])\1+/g, "$1")
+    .replace(/\s+,/g, ",")
+    .replace(/,(\s*,)+/g, ",")
     .replace(/\s+/g, " ")
     .trim();
-  return cleaned || String(text || "").replace(/\s+/g, " ").trim();
+  return cleaned || dropForbiddenWord(String(text || "")).replace(/\s+/g, " ").trim();
 }
 
 function chooseVoice(voices, lang) {
@@ -836,13 +858,11 @@ function chooseVoice(voices, lang) {
   return best;
 }
 
-function chunkProsody(segment, rate, lively) {
-  if (segment.lang === "en-US") {
-    return { rate: Math.max(0.9, Math.min(rate, 1) * 0.96), pitch: 1 };
-  }
+function chunkProsody(segment, rate) {
+  const even = Math.max(0.85, Math.min(rate, 1.02));
   return {
-    rate: Math.min(1.05, Math.max(0.92, rate)),
-    pitch: lively ? 1.05 : 1.02,
+    rate: segment.lang === "en-US" ? Math.min(even, 1) : even,
+    pitch: 1,
   };
 }
 
@@ -952,7 +972,7 @@ async function speakReply(text, lang, serial, options) {
     }
     const segment = segments[index];
     index += 1;
-    const prosody = chunkProsody(segment, rate, lively);
+    const prosody = chunkProsody(segment, rate);
     let utterance;
     try {
       utterance = new SpeechSynthesisUtterance(segment.text);
@@ -970,7 +990,7 @@ async function speakReply(text, lang, serial, options) {
       }
       utterance.onend = () => {
         if (token !== speechToken) return;
-        window.setTimeout(speakNext, 120);
+        window.setTimeout(speakNext, 30);
       };
       utterance.onerror = (event) => {
         if (token !== speechToken) return;
@@ -1189,16 +1209,16 @@ function isQuotaResponse(status, body) {
 
 const QUOTA_LINES = [
   {
-    spoken: "Hoy, prosta, hozir navbat to‘lib qoldi. Bir zum kut, keyin shu gapingni qayta ayt.",
-    reaction: "Vabshe, bu seniki emas. Hozir joy to‘lib qoldi, gaping saqlangan. Birozdan yana yubor.",
+    spoken: "Hozir navbat to‘lib qoldi. Bir zum kut, keyin shu gapingni qayta ayt.",
+    reaction: "Bu seniki emas. Hozir joy to‘lib qoldi, gaping saqlangan. Birozdan yana yubor.",
   },
   {
-    spoken: "Karochi, hozir o‘zim navbatdaman. Gaping yo‘qolmadi, bir zumdan qayta yubor.",
-    reaction: "Prosta, chegara to‘ldi. Matn joyida turibdi, qayta yuborsang bo‘ldi.",
+    spoken: "Hozir o‘zim navbatdaman. Gaping yo‘qolmadi, bir zumdan qayta yubor.",
+    reaction: "Chegara to‘ldi. Matn joyida turibdi, qayta yuborsang bo‘ldi.",
   },
   {
-    spoken: "Norm gapirding, lekin hozir joy yo‘q. Bir daqiqa dam olib, yana yoz yoki gapir.",
-    reaction: "Hozir server band. Xato seniki emas, varianti shu: biroz kutib, yana yuboramiz.",
+    spoken: "Gapirding, lekin hozir joy yo‘q. Bir daqiqa dam olib, yana yoz yoki gapir.",
+    reaction: "Hozir server band. Xato seniki emas. Biroz kutib, yana yuboramiz.",
   },
 ];
 let quotaTurn = 0;
@@ -1294,7 +1314,7 @@ function parseTutorJson(raw, userText) {
     throw tutorError(MESSAGES.malformed);
   }
 
-  const spoken = dropForbiddenWord(spokenRaw.trim());
+  const spoken = prepareSpokenText(spokenRaw.trim());
   const { surprise, reaction: reactionText } = splitReaction(reactionRaw, userText);
   const reaction = dropForbiddenWord(reactionText);
   if (!reaction || !spoken) throw tutorError(MESSAGES.malformed);
@@ -1315,8 +1335,8 @@ function parseTutorJson(raw, userText) {
 
 function dropForbiddenWord(value) {
   return String(value || "")
-    .replace(/\b(?:vapshe|vabshe|vobshe|vapshe)\b/gi, "")
-    .replace(/вообще|вобще/gi, "")
+    .replace(/\b(?:vapshe|vabshe|vobshe|prosto|prosta)\b/gi, "")
+    .replace(/вообще|вобще|просто/gi, "")
     .replace(/\s{2,}/g, " ")
     .replace(/\s+([,.;:!?])/g, "$1")
     .replace(/^\s*[,;:]\s*/, "")
