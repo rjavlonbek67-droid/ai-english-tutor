@@ -2,14 +2,15 @@
  * AI Ingliz tili ustozi — production server.
  *
  * Local run:
- *   1. Copy .env.example to .env and set GEMINI_API_KEY.
+ *   1. Copy .env.example to .env and set GROQ_API_KEY.
  *   2. npm install
  *   3. npm start
  *   4. Open http://localhost:3000
  *
  * Render, Railway, and similar hosts:
  *   - Start command: npm start
- *   - Set the GEMINI_API_KEY environment variable in the host dashboard.
+ *   - Set the GROQ_API_KEY environment variable in the host dashboard.
+ *   - Optional GROQ_MODEL picks the first Groq model. Others are tried if it is unavailable.
  *   - Do not commit .env, paste the key into chat, or put it in a screenshot.
  *   - The browser only calls /api/chat. The key stays in process.env.
  */
@@ -20,7 +21,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-3.5-flash"];
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+const FALLBACK_MODELS = ["llama-3.3-70b-versatile", "openai/gpt-oss-120b", "llama-3.1-8b-instant"];
 
 dotenv.config({ path: path.join(__dirname, ".env") });
 
@@ -33,12 +35,12 @@ app.use(express.json({ limit: "1mb" }));
 app.get("/api/health", (_req, res) => {
   res.json({
     mode: "backend",
-    configured: Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim()),
+    configured: Boolean(groqKey()),
   });
 });
 
 app.post("/api/chat", async (req, res) => {
-  const key = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : "";
+  const key = groqKey();
   if (!key) {
     res.status(503).json({ error: "missing-server-key" });
     return;
@@ -49,7 +51,7 @@ app.post("/api/chat", async (req, res) => {
   }
 
   try {
-    const forwarded = await forwardToGemini(req.body, key);
+    const forwarded = await forwardToGroq(req.body, key);
     res.status(forwarded.status);
     res.type(forwarded.type);
     res.send(forwarded.text);
@@ -58,10 +60,38 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
+function groqKey() {
+  return process.env.GROQ_API_KEY ? process.env.GROQ_API_KEY.trim() : "";
+}
+
+function groqModels() {
+  const chosen = String(process.env.GROQ_MODEL || "").trim();
+  const models = [];
+  if (chosen) models.push(chosen);
+  FALLBACK_MODELS.forEach((model) => {
+    if (!models.includes(model)) models.push(model);
+  });
+  return models;
+}
+
 function sleep(ms) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+}
+
+function toGroqMessages(body) {
+  const messages = [];
+  const system = typeof body.system === "string" ? body.system.trim() : "";
+  if (system) messages.push({ role: "system", content: system });
+  const turns = Array.isArray(body.messages) ? body.messages : [];
+  turns.forEach((turn) => {
+    const role = turn?.role === "assistant" ? "assistant" : turn?.role === "user" ? "user" : "";
+    const content = typeof turn?.content === "string" ? turn.content.trim() : "";
+    if (!role || !content) return;
+    messages.push({ role, content });
+  });
+  return messages;
 }
 
 function isQuotaAttempt(attempt) {
@@ -70,6 +100,7 @@ function isQuotaAttempt(attempt) {
     sample.includes("resource_exhausted") ||
     sample.includes("quota") ||
     sample.includes("rate limit") ||
+    sample.includes("rate_limit") ||
     sample.includes("rate-limit");
   if (attempt.status === 429) return true;
   return marked && (attempt.status === 403 || attempt.status === 500 || attempt.status === 503);
@@ -85,6 +116,16 @@ function quotaWaitMs(attempt) {
   return Math.round(wait);
 }
 
+function modelUnavailable(attempt) {
+  if (attempt.status === 404 || attempt.status === 503) return true;
+  if (attempt.status !== 400) return false;
+  return /model|decommission|not found|does not exist|unknown model/.test(attempt.text.toLowerCase());
+}
+
+function jsonModeRejected(attempt) {
+  return attempt.status === 400 && /response_format|json_object|json mode/i.test(attempt.text);
+}
+
 function quotaResult() {
   return {
     status: 429,
@@ -93,17 +134,32 @@ function quotaResult() {
   };
 }
 
-async function callModel(model, body, key) {
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      cache: "no-store",
-      signal: AbortSignal.timeout(20000),
-    }
-  );
+function jsonResult(status, error) {
+  return {
+    status,
+    type: "application/json; charset=utf-8",
+    text: JSON.stringify({ error }),
+  };
+}
+
+async function callGroq(model, messages, key, jsonMode) {
+  const payload = {
+    model,
+    messages,
+    temperature: 0.7,
+    max_tokens: 3072,
+  };
+  if (jsonMode) payload.response_format = { type: "json_object" };
+  const response = await fetch(GROQ_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${key}`,
+    },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+    signal: AbortSignal.timeout(25000),
+  });
   return {
     ok: response.ok,
     status: response.status,
@@ -113,33 +169,57 @@ async function callModel(model, body, key) {
   };
 }
 
-function publicResult(attempt) {
-  return { status: attempt.status, type: attempt.type, text: attempt.text };
+function tutorText(attempt) {
+  let content = "";
+  try {
+    const data = JSON.parse(attempt.text);
+    const message = data?.choices?.[0]?.message?.content;
+    if (typeof message === "string") content = message;
+    else if (Array.isArray(message)) {
+      content = message.map((part) => part?.text || part?.content || "").join("");
+    }
+  } catch {
+    content = "";
+  }
+  const text = String(content || "").trim();
+  if (!text) return jsonResult(502, "empty-reply");
+  return {
+    status: 200,
+    type: "application/json; charset=utf-8",
+    text: JSON.stringify({ text }),
+  };
 }
 
-async function forwardToGemini(body, key) {
-  let last = { status: 502, type: "application/json", text: JSON.stringify({ error: "upstream-network" }) };
+async function forwardToGroq(body, key) {
+  const messages = toGroqMessages(body);
+  if (!messages.some((message) => message.role === "user")) return jsonResult(400, "invalid-body");
+
+  const models = groqModels();
+  let last = jsonResult(502, "upstream-network");
   let quotaRetried = false;
 
-  for (let index = 0; index < GEMINI_MODELS.length; index += 1) {
-    const attempt = await callModel(GEMINI_MODELS[index], body, key);
-    last = publicResult(attempt);
-    if (attempt.ok) return last;
+  for (let index = 0; index < models.length; index += 1) {
+    let attempt = await callGroq(models[index], messages, key, true);
+    if (jsonModeRejected(attempt)) attempt = await callGroq(models[index], messages, key, false);
+    if (attempt.ok) return tutorText(attempt);
+    if (attempt.status === 401) return jsonResult(401, "bad-key");
 
     if (isQuotaAttempt(attempt)) {
       const wait = quotaWaitMs(attempt);
       if (quotaRetried || wait === 0) return quotaResult();
       quotaRetried = true;
       await sleep(wait);
-      if (index < GEMINI_MODELS.length - 1) continue;
-      const again = await callModel(GEMINI_MODELS[index], body, key);
-      last = publicResult(again);
-      if (again.ok) return last;
+      if (index < models.length - 1) continue;
+      const again = await callGroq(models[index], messages, key, true);
+      if (again.ok) return tutorText(again);
       return quotaResult();
     }
 
-    const retryable = attempt.status === 404 || attempt.status === 503;
-    if (!retryable) return last;
+    if (!modelUnavailable(attempt)) {
+      if (attempt.status === 403) return jsonResult(403, "bad-key");
+      return jsonResult(attempt.status >= 500 ? attempt.status : 502, "upstream");
+    }
+    last = jsonResult(502, "upstream");
   }
 
   return last;

@@ -1,7 +1,7 @@
 /**
  * AI Ingliz tili ustozi
  *
- * Chat goes to /api/chat. The Gemini key stays in the server environment.
+ * Chat goes to /api/chat. The Groq key stays in the server environment.
  * Recent turns stay in memory. localStorage keeps the level, voice prefs, and the notebook only.
  */
 
@@ -34,9 +34,9 @@ const LISTEN_LIMIT_MS = 12000;
 const HANDS_FREE_GAP_MS = 900;
 
 const MESSAGES = {
-  missingServerKey: "Serverda GEMINI_API_KEY yo‘q. Render sozlamasiga kalitni qo‘ying.",
+  missingServerKey: "Serverda GROQ_API_KEY yo‘q. Render sozlamasiga kalitni qo‘ying.",
   offline: "Ustoz serveri topilmadi. Sahifani server manzili orqali oching.",
-  badKey: "API kaliti yaroqsiz yoki muddati o‘tgan. Serverdagi kalitni tekshiring.",
+  badKey: "API kaliti yaroqsiz yoki muddati o‘tgan. Serverdagi Groq kalitini tekshiring.",
   quota: "Hoy, prosta, hozir navbat to‘lib qoldi. Bir zum kutib, qayta yubor.",
   network: "Tarmoq xatosi. Internetni tekshirib, qayta urinib ko‘ring.",
   server: "Gemini serveri hozir javob bermadi. Birozdan so‘ng qayta urinib ko‘ring.",
@@ -88,6 +88,7 @@ They may be a complete beginner or an IELTS candidate. They mix Uzbek and Englis
 "Do‘st" ingliz tilida nima deyiladi?
 
 You understand Uzbek accurately, including spoken spelling and code-switching. Treat o‘, o', oʻ, g‘, and g' as normal Uzbek letters. Understand everyday words such as prosta, vabshe, karochi, norm, tema, varianti, and takshta.
+Write Uzbek the way people actually talk, not like a translated textbook. Prefer a short spoken sentence over stiff lines such as "iltimos e'tibor bering" or "quyidagi iborani qo'llang". Do not translate English word for word.
 For a translation or meaning question, give the everyday English first, then a more formal or IELTS alternative when the words differ.
 
 Talk openly, from the start of the thought to the end. Finish every sentence you begin. Never stop mid-word, mid-phrase, or mid-sentence. A few complete sentences is right. Do not shorten a sentence to save space.
@@ -640,6 +641,25 @@ function spokenSegments(text) {
   return splitSpokenLine(text).flatMap(splitForSpeech);
 }
 
+/**
+ * Keep the written reply as it is. The voice hears a cleaned line so it
+ * does not spell out stars, links, or leftover marks.
+ */
+function prepareSpokenText(text) {
+  const cleaned = String(text || "")
+    .replace(/^(SURPRISE|CALM)\s*:\s*/i, "")
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/[*_#~`|\\^]+/g, " ")
+    .replace(/[<>[\]{}]/g, " ")
+    .replace(/https?:\/\/\S+/gi, " ")
+    .replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, " ")
+    .replace(/[—–]/g, ", ")
+    .replace(/\.{3,}|…+/g, ", ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return cleaned || String(text || "").replace(/\s+/g, " ").trim();
+}
+
 function chooseVoice(voices, lang) {
   const uzbek = lang !== "en-US";
   let best = null;
@@ -649,7 +669,9 @@ function chooseVoice(voices, lang) {
     const name = `${voice.name || ""} ${voice.voiceURI || ""}`.toLowerCase();
     let score = -1;
     if (uzbek) {
-      if (voiceLang.startsWith("uz") || /uzbek|o‘zbek|ozbek/.test(name)) score = 80;
+      if (voiceLang === "uz-uz" || voiceLang === "uz-latn-uz" || voiceLang === "uz") score = 100;
+      else if (voiceLang.startsWith("uz")) score = 90;
+      else if (/uzbek|o‘zbek|ozbek/.test(name)) score = 84;
       else if (voiceLang.startsWith("tr")) score = 46;
       else if (voiceLang.startsWith("az")) score = 40;
       else if (voiceLang.startsWith("kk") || voiceLang.startsWith("ky") || voiceLang.startsWith("tk")) score = 32;
@@ -669,11 +691,11 @@ function chooseVoice(voices, lang) {
 
 function chunkProsody(segment, rate, lively) {
   if (segment.lang === "en-US") {
-    return { rate: Math.max(0.82, Math.min(rate, 1) * 0.94), pitch: lively ? 1.05 : 1 };
+    return { rate: Math.max(0.9, Math.min(rate, 1) * 0.96), pitch: 1 };
   }
   return {
-    rate: Math.min(1.12, rate * (lively ? 1.05 : 1)),
-    pitch: lively ? 1.16 : 1.08,
+    rate: Math.min(1.05, Math.max(0.92, rate)),
+    pitch: lively ? 1.05 : 1.02,
   };
 }
 
@@ -765,18 +787,8 @@ async function speakReply(text, lang, serial, options) {
   const voices = await ensureVoices();
   if (token !== speechToken || serial !== requestSerial) return;
 
-  if (!voices.length) {
-    speechArmed = false;
-    resumeAfterThisSpeech = false;
-    syncStopButton();
-    showSpeechNotice(MESSAGES.noVoice);
-    setAvatarState("idle");
-    if (handsFree) scheduleLiveListen();
-    return;
-  }
-
   const rate = activeSpeechRate();
-  const segments = spokenSegments(text);
+  const segments = spokenSegments(prepareSpokenText(text));
   if (!segments.length) {
     speechArmed = false;
     resumeAfterThisSpeech = false;
@@ -1005,44 +1017,16 @@ function buildUserTurn(text, lang) {
 }
 
 function buildTutorRequestBody(text, lang) {
-  const contents = [];
+  const messages = [];
   conversation.forEach((turn) => {
-    contents.push({ role: "user", parts: [{ text: turn.user }] });
-    contents.push({ role: "model", parts: [{ text: turn.model }] });
+    messages.push({ role: "user", content: turn.user });
+    messages.push({ role: "assistant", content: turn.model });
   });
-  contents.push({ role: "user", parts: [{ text: buildUserTurn(text, lang) }] });
+  messages.push({ role: "user", content: buildUserTurn(text, lang) });
 
   return {
-    systemInstruction: {
-      parts: [{ text: `${SYSTEM_INSTRUCTION}\n\nActive coach mode: ${TUTOR_MODES[tutorMode].label}. ${TUTOR_MODES[tutorMode].coach}` }],
-    },
-    contents,
-    generationConfig: {
-      temperature: 0.8,
-      maxOutputTokens: 4096,
-      thinkingConfig: { thinkingBudget: 0 },
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: "OBJECT",
-        properties: {
-          reaction_and_correction: { type: "STRING" },
-          spoken_reply: { type: "STRING" },
-          notebook: {
-            type: "ARRAY",
-            items: {
-              type: "OBJECT",
-              properties: {
-                kind: { type: "STRING" },
-                title: { type: "STRING" },
-                note: { type: "STRING" },
-              },
-              required: ["kind", "title", "note"],
-            },
-          },
-        },
-        required: ["reaction_and_correction", "spoken_reply"],
-      },
-    },
+    system: `${SYSTEM_INSTRUCTION}\n\nActive coach mode: ${TUTOR_MODES[tutorMode].label}. ${TUTOR_MODES[tutorMode].coach}`,
+    messages,
   };
 }
 
@@ -1118,10 +1102,11 @@ function waitForRetry(ms, signal) {
 }
 
 function extractCandidateText(payload) {
-  if (payload?.promptFeedback?.blockReason) return "";
-  const parts = payload?.candidates?.[0]?.content?.parts;
-  if (!Array.isArray(parts)) return "";
-  return parts.map((part) => part.text || "").join("").trim();
+  if (typeof payload?.text === "string") return payload.text.trim();
+  const content = payload?.choices?.[0]?.message?.content;
+  if (typeof content === "string") return content.trim();
+  if (Array.isArray(content)) return content.map((part) => part?.text || "").join("").trim();
+  return "";
 }
 
 function fallbackSurprise(userText, reaction) {

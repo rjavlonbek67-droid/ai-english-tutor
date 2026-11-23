@@ -9,7 +9,7 @@ services:
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
-      - key: GEMINI_API_KEY
+      - key: GROQ_API_KEY
         sync: false
       - key: NODE_VERSION
         value: "20"
