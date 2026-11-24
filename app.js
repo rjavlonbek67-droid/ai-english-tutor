@@ -888,18 +888,27 @@ function stopListening(options) {
   return true;
 }
 
-function cancelSpeech() {
-  speechToken += 1;
-  speechArmed = false;
-  pendingSpeech = null;
-  clearSpeechWatchdog();
-  syncStopButton();
+function flushSpeechQueue() {
   if (!speechOutputSupported()) return;
   try {
     window.speechSynthesis.cancel();
   } catch {
     // ignore browsers that throw when nothing is queued
   }
+  try {
+    if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+  } catch {
+    // A paused queue can already be clear.
+  }
+}
+
+function cancelSpeech() {
+  speechToken += 1;
+  speechArmed = false;
+  pendingSpeech = null;
+  clearSpeechWatchdog();
+  syncStopButton();
+  flushSpeechQueue();
   stopMouth();
 }
 
@@ -1226,19 +1235,35 @@ function bindPushToTalk() {
   });
 }
 
+let cachedVoices = [];
+
+function readVoices() {
+  if (!speechOutputSupported()) return cachedVoices;
+  const list = window.speechSynthesis.getVoices();
+  if (list && list.length) cachedVoices = list;
+  return cachedVoices;
+}
+
 function ensureVoices() {
-  const current = window.speechSynthesis.getVoices();
+  const current = readVoices();
   if (current.length) return Promise.resolve(current);
   return new Promise((resolve) => {
     let done = false;
     const finish = () => {
+      const list = readVoices();
+      if (!list.length) return;
       if (done) return;
       done = true;
       window.speechSynthesis.removeEventListener("voiceschanged", finish);
-      resolve(window.speechSynthesis.getVoices());
+      resolve(list);
     };
     window.speechSynthesis.addEventListener("voiceschanged", finish);
-    window.setTimeout(finish, VOICE_WAIT_MS);
+    window.setTimeout(() => {
+      if (done) return;
+      done = true;
+      window.speechSynthesis.removeEventListener("voiceschanged", finish);
+      resolve(readVoices());
+    }, Math.max(VOICE_WAIT_MS, 1400));
   });
 }
 
@@ -1462,23 +1487,11 @@ function voiceName(voice) {
 function voiceNaturalScore(voice) {
   const name = voiceName(voice);
   let score = 0;
-  if (/natural|neural|premium|enhanced|google|siri|online/.test(name)) score += 24;
-  if (/robot|compact|espeak/.test(name)) score -= 30;
-  if (
-    /\bmale\b|\bman\b|david|daniel|alex\b|fred|mark|james|ryan|george|brian|matthew|andrew|eric|john|paul|rishi|arthur|gordon|ralph|aaron|christopher|oliver|nathan|ahmet|emre|tolga|erkek|erkak|yusuf|mehmet/.test(
-      name
-    )
-  ) {
-    score += 16;
-  }
-  if (
-    /\bfemale\b|\bwoman\b|zira|hazel|samantha|victoria|susan|karen|moira|fiona|tessa|serena|kate|salli|ivy|joanna|kimberly|linda|ayanda|yelda|heather|catherine|allison|jenny|aria|natasha|irina|milena|ayse|ayşe|fatma|zehra|emel|filiz/.test(
-      name
-    )
-  ) {
-    score -= 10;
-  }
-  if (voice.localService) score += 2;
+  if (/natural|neural|premium|enhanced|wavenet|studio/.test(name)) score += 42;
+  if (/google|microsoft|online|siri|samsung/.test(name)) score += 18;
+  if (/robot|compact|espeak|festival|low quality/.test(name)) score -= 40;
+  if (/\bmale\b|\bman\b/.test(name)) score += 4;
+  if (voice.localService && !/compact|espeak/.test(name)) score += 6;
   return score;
 }
 
@@ -1506,7 +1519,7 @@ function chooseVoice(voices, lang) {
     if (uz.length) return bestVoice(uz);
     const turkish = list.filter((voice) => {
       const voiceLang = String(voice.lang || "").toLowerCase();
-      return voiceLang === "tr" || voiceLang.startsWith("tr-");
+      return (voiceLang === "tr" || voiceLang.startsWith("tr-")) && !voiceLang.startsWith("kk");
     });
     if (turkish.length) return bestVoice(turkish);
     return null;
@@ -1529,6 +1542,21 @@ function chooseVoice(voices, lang) {
   return best;
 }
 
+function applyVoice(utterance, voice, fallbackLang) {
+  utterance.lang = fallbackLang;
+  if (!voice) return;
+  try {
+    utterance.voice = voice;
+  } catch {
+    utterance.lang = fallbackLang;
+    return;
+  }
+  const voiceLang = String(voice.lang || "").toLowerCase();
+  const wantsEnglish = fallbackLang === "en-US";
+  const matches = wantsEnglish ? voiceLang.startsWith("en") : voiceLang.startsWith("uz") || voiceLang.startsWith("tr");
+  if (matches && voice.lang) utterance.lang = voice.lang;
+}
+
 function lineEnergy(text) {
   const sample = String(text || "").toLowerCase().replace(/[‘’ʼ`ʻ]/g, "'");
   if (/\b(deyapsan|bilmaysan|tushunmadim|boshidan|xato|noto\w*|wrong|deyil|emas|boshqacha|stop|bas)\b/.test(sample)) return "push";
@@ -1538,15 +1566,22 @@ function lineEnergy(text) {
   return "live";
 }
 
+function clampProsody(rate, pitch) {
+  return {
+    rate: Math.min(1.06, Math.max(0.94, rate)),
+    pitch: Math.min(1.05, Math.max(0.9, pitch)),
+  };
+}
+
 function chunkProsody(segment) {
-  if (segment && segment.lang === "en-US") return { rate: 1.0, pitch: 1.0 };
+  if (segment && segment.lang === "en-US") return clampProsody(1.0, 1.0);
   const energy = lineEnergy(segment && segment.text);
-  if (energy === "push") return { rate: 1.12, pitch: 0.84 };
-  if (energy === "challenge") return { rate: 1.08, pitch: 1.02 };
-  if (energy === "spark") return { rate: 1.05, pitch: 1.04 };
-  if (energy === "follow") return { rate: 0.98, pitch: 0.96 };
-  if (stickerName === "sad") return { rate: 0.96, pitch: 0.94 };
-  return { rate: 1.04, pitch: 0.98 };
+  if (energy === "push") return clampProsody(1.06, 0.9);
+  if (energy === "challenge") return clampProsody(1.05, 1.02);
+  if (energy === "spark") return clampProsody(1.04, 1.04);
+  if (energy === "follow") return clampProsody(0.97, 0.96);
+  if (stickerName === "sad") return clampProsody(0.95, 0.94);
+  return clampProsody(1.02, 0.98);
 }
 
 function activeSpeechRate() {
@@ -1659,18 +1694,10 @@ async function speakReply(text, lang, serial, options) {
     let utterance;
     try {
       utterance = new SpeechSynthesisUtterance(segment.text);
-      utterance.lang = segment.lang;
       utterance.rate = prosody.rate;
       utterance.pitch = prosody.pitch;
-      const voice = chooseVoice(voices, segment.lang);
-      if (voice) {
-        try {
-          utterance.voice = voice;
-          if (voice.lang) utterance.lang = voice.lang;
-        } catch {
-          utterance.lang = segment.lang;
-        }
-      }
+      utterance.volume = 1;
+      applyVoice(utterance, chooseVoice(readVoices().length ? readVoices() : voices, segment.lang), segment.lang);
       utterance.onstart = () => {
         if (token !== speechToken) return;
         nudgeMouth(segment.text.slice(0, 8), "word");
@@ -1712,13 +1739,9 @@ async function speakReply(text, lang, serial, options) {
         finishSpeech(token, serial, "error");
       }
     };
-    if (index === 1 && (window.speechSynthesis.speaking || window.speechSynthesis.pending)) {
-      try {
-        window.speechSynthesis.cancel();
-      } catch {
-        // An empty queue can throw in a few browsers.
-      }
-      window.setTimeout(start, 60);
+    if (index === 1) {
+      flushSpeechQueue();
+      window.setTimeout(start, 80);
       return;
     }
     start();
@@ -2336,7 +2359,10 @@ function init() {
   syncStopButton();
   syncReplayButton();
   micBtn.setAttribute("aria-label", "Bosib turing va gapiring");
-  if (speechOutputSupported()) window.speechSynthesis.getVoices();
+  if (speechOutputSupported()) {
+    readVoices();
+    window.speechSynthesis.addEventListener("voiceschanged", readVoices);
+  }
   void detectChatMode();
 
   if (modeListEl) modeListEl.addEventListener("click", handleModeClick);
