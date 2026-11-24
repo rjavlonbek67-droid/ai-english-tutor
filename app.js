@@ -237,16 +237,16 @@ function setAvatarState(state) {
   else if (state !== "speaking") setSticker("calm", true);
 }
 
-const ROUND_STICKERS = ["joy", "grimace", "monocle", "swear", "bags", "scream"];
-
 const STICKER_ALIAS = {
-  calm: "monocle",
-  think: "monocle",
-  explain: "monocle",
-  soft: "monocle",
-  peek: "monocle",
-  salute: "monocle",
-  shush: "monocle",
+  calm: "calm",
+  soft: "calm",
+  salute: "calm",
+  think: "think",
+  explain: "think",
+  monocle: "think",
+  peek: "think",
+  shush: "think",
+  money: "think",
   laugh: "joy",
   grin: "joy",
   beam: "joy",
@@ -259,40 +259,45 @@ const STICKER_ALIAS = {
   angel: "joy",
   giggle: "joy",
   kiss: "joy",
-  tearsmile: "joy",
-  angry: "swear",
-  huff: "swear",
-  rage: "swear",
+  tearsmile: "sad",
+  angry: "rage",
+  huff: "rage",
+  swear: "rage",
+  rage: "rage",
   persevere: "grimace",
   zany: "grimace",
   cowboy: "grimace",
-  sad: "bags",
-  plead: "bags",
-  anxious: "bags",
-  yawn: "bags",
-  melt: "bags",
-  sick: "bags",
-  woozy: "bags",
-  dizzy: "bags",
-  spiral: "bags",
-  hot: "bags",
-  cold: "bags",
-  mask: "bags",
-  vomit: "bags",
-  drool: "bags",
-  blown: "scream",
-  shake: "scream",
-  money: "monocle",
+  grimace: "grimace",
+  sad: "sad",
+  plead: "sad",
+  anxious: "sad",
+  yawn: "sad",
+  melt: "sad",
+  sick: "sad",
+  woozy: "sad",
+  dizzy: "sad",
+  spiral: "sad",
+  hot: "sad",
+  cold: "sad",
+  mask: "sad",
+  vomit: "sad",
+  drool: "sad",
+  bags: "sad",
+  blown: "shock",
+  shake: "shock",
+  scream: "shock",
+  shock: "shock",
+  joy: "joy",
 };
-const STICKER_IDS = new Set(ROUND_STICKERS);
+const STICKER_IDS = new Set(["calm", "joy", "think", "shock", "sad", "rage", "grimace"]);
 const MOOD_PALETTES = {
-  firm: ["grimace", "swear", "monocle", "scream", "bags"],
-  warm: ["joy", "monocle", "grimace"],
-  laugh: ["joy", "grimace", "scream"],
-  think: ["monocle", "grimace", "bags"],
-  low: ["bags", "grimace", "monocle"],
-  sick: ["bags", "grimace", "scream"],
-  calm: ["monocle", "grimace", "joy"],
+  firm: ["grimace", "rage", "think", "shock", "sad"],
+  warm: ["joy", "calm", "grimace"],
+  laugh: ["joy", "shock", "grimace"],
+  think: ["think", "calm", "grimace"],
+  low: ["sad", "grimace", "calm"],
+  sick: ["sad", "grimace", "shock"],
+  calm: ["calm", "think", "joy"],
 };
 const WORD_MOOD = {
   yaxshi: "grin",
@@ -400,126 +405,145 @@ let userMissed = false;
 let speechPalette = "calm";
 let speechCursor = 0;
 
-function svgNode(tag, attrs) {
-  const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
-  Object.keys(attrs).forEach((key) => node.setAttribute(key, attrs[key]));
-  return node;
-}
-
-function roundSticker(id, kids) {
-  const svg = svgNode("svg", { class: "sticker sticker-" + id, viewBox: "0 0 200 200", "aria-hidden": "true" });
-  kids.forEach((node) => svg.appendChild(node));
-  return svg;
-}
-
-function mountStickers() {
-  if (stickersReady || !avatarEl) return;
-  stickersReady = true;
-  avatarEl.querySelectorAll(".sticker").forEach((node) => node.remove());
-  ROUND_STICKERS.forEach((id) => avatarEl.appendChild(ROUND_FACE[id]()));
-}
-
-const ROUND_FACE = {
-  joy() {
-    return roundSticker("joy", [
-      svgNode("circle", { cx: "100", cy: "100", r: "90", fill: "#FFCC4D" }),
-      svgNode("circle", { cx: "100", cy: "100", r: "90", fill: "none", stroke: "#F5A623", "stroke-width": "5" }),
-      svgNode("path", { d: "M46 112c10 22 8 40 0 54", fill: "none", stroke: "#5DADEC", "stroke-width": "8", "stroke-linecap": "round" }),
-      svgNode("path", { d: "M154 112c-10 22-8 40 0 54", fill: "none", stroke: "#5DADEC", "stroke-width": "8", "stroke-linecap": "round" }),
-      svgNode("path", { d: "M46 88c16 18 30 18 42 0", fill: "none", stroke: "#6B3E26", "stroke-width": "7", "stroke-linecap": "round" }),
-      svgNode("path", { d: "M112 88c16 18 30 18 42 0", fill: "none", stroke: "#6B3E26", "stroke-width": "7", "stroke-linecap": "round" }),
-      svgNode("path", { d: "M64 116c12 40 60 40 72 0", fill: "#6B3E26" }),
-      svgNode("path", { d: "M78 124h44v12H78z", fill: "#fff" }),
-    ]);
-  },
-  grimace() {
-    return roundSticker("grimace", [
-      svgNode("circle", { cx: "100", cy: "100", r: "90", fill: "#FFCC4D" }),
-      svgNode("circle", { cx: "100", cy: "100", r: "90", fill: "none", stroke: "#F5A623", "stroke-width": "5" }),
-      svgNode("path", { d: "M48 62c14-10 28-4 32 6", fill: "none", stroke: "#6B3E26", "stroke-width": "6", "stroke-linecap": "round" }),
-      svgNode("path", { d: "M120 68c10-8 26-6 34 4", fill: "none", stroke: "#6B3E26", "stroke-width": "6", "stroke-linecap": "round" }),
-      svgNode("ellipse", { cx: "70", cy: "90", rx: "12", ry: "14", fill: "#6B3E26" }),
-      svgNode("ellipse", { cx: "130", cy: "90", rx: "12", ry: "14", fill: "#6B3E26" }),
-      svgNode("circle", { cx: "74", cy: "86", r: "4", fill: "#fff" }),
-      svgNode("circle", { cx: "134", cy: "86", r: "4", fill: "#fff" }),
-      svgNode("rect", { x: "56", y: "118", width: "88", height: "38", rx: "8", fill: "#fff", stroke: "#6B3E26", "stroke-width": "4" }),
-      svgNode("path", { d: "M74 118v38M92 118v38M110 118v38M128 118v38", fill: "none", stroke: "#E7D3C4", "stroke-width": "3" }),
-    ]);
-  },
-  monocle() {
-    return roundSticker("monocle", [
-      svgNode("circle", { cx: "100", cy: "100", r: "90", fill: "#FFCC4D" }),
-      svgNode("circle", { cx: "100", cy: "100", r: "90", fill: "none", stroke: "#F5A623", "stroke-width": "5" }),
-      svgNode("path", { d: "M46 64c16-16 34-8 38 4", fill: "none", stroke: "#6B3E26", "stroke-width": "6", "stroke-linecap": "round" }),
-      svgNode("path", { d: "M116 74h36", fill: "none", stroke: "#6B3E26", "stroke-width": "6", "stroke-linecap": "round" }),
-      svgNode("circle", { cx: "70", cy: "96", r: "10", fill: "#6B3E26" }),
-      svgNode("circle", { cx: "74", cy: "92", r: "3", fill: "#fff" }),
-      svgNode("circle", { cx: "132", cy: "96", r: "9", fill: "#6B3E26" }),
-      svgNode("circle", { cx: "135", cy: "93", r: "3", fill: "#fff" }),
-      svgNode("circle", { cx: "132", cy: "96", r: "22", fill: "none", stroke: "#5C4636", "stroke-width": "5" }),
-      svgNode("path", { d: "M152 108c14 18 10 36 4 52", fill: "none", stroke: "#5C4636", "stroke-width": "3", "stroke-linecap": "round" }),
-      svgNode("path", { d: "M74 136c14 12 38 12 52 0", fill: "none", stroke: "#6B3E26", "stroke-width": "6", "stroke-linecap": "round" }),
-    ]);
-  },
-  swear() {
-    return roundSticker("swear", [
-      svgNode("circle", { cx: "100", cy: "100", r: "90", fill: "#F0483E" }),
-      svgNode("circle", { cx: "100", cy: "100", r: "90", fill: "none", stroke: "#C62828", "stroke-width": "5" }),
-      svgNode("path", { d: "M46 68l34 16", fill: "none", stroke: "#6B1D18", "stroke-width": "8", "stroke-linecap": "round" }),
-      svgNode("path", { d: "M154 68l-34 16", fill: "none", stroke: "#6B1D18", "stroke-width": "8", "stroke-linecap": "round" }),
-      svgNode("circle", { cx: "74", cy: "104", r: "8", fill: "#fff" }),
-      svgNode("circle", { cx: "126", cy: "104", r: "8", fill: "#fff" }),
-      svgNode("circle", { cx: "76", cy: "104", r: "3", fill: "#2A2A2A" }),
-      svgNode("circle", { cx: "128", cy: "104", r: "3", fill: "#2A2A2A" }),
-      svgNode("rect", { x: "58", y: "124", width: "84", height: "32", rx: "8", fill: "#fff" }),
-      svgNode("path", { d: "M70 130v20M82 130v20M66 136h20M66 146h20", fill: "none", stroke: "#2A2A2A", "stroke-width": "3", "stroke-linecap": "round" }),
-      svgNode("circle", { cx: "112", cy: "140", r: "8", fill: "none", stroke: "#2A2A2A", "stroke-width": "3" }),
-      svgNode("path", { d: "M124 132l14 16M138 132l-8 16", fill: "none", stroke: "#2A2A2A", "stroke-width": "3", "stroke-linecap": "round" }),
-    ]);
-  },
-  bags() {
-    return roundSticker("bags", [
-      svgNode("circle", { cx: "100", cy: "100", r: "90", fill: "#FFCC4D" }),
-      svgNode("circle", { cx: "100", cy: "100", r: "90", fill: "none", stroke: "#F5A623", "stroke-width": "5" }),
-      svgNode("path", { d: "M48 78c12 8 24 8 34 0", fill: "none", stroke: "#6B3E26", "stroke-width": "6", "stroke-linecap": "round" }),
-      svgNode("path", { d: "M118 78c12 8 24 8 34 0", fill: "none", stroke: "#6B3E26", "stroke-width": "6", "stroke-linecap": "round" }),
-      svgNode("ellipse", { cx: "68", cy: "98", rx: "14", ry: "10", fill: "#6B3E26" }),
-      svgNode("ellipse", { cx: "132", cy: "98", rx: "14", ry: "10", fill: "#6B3E26" }),
-      svgNode("path", { d: "M52 108c10 14 22 16 32 6", fill: "none", stroke: "#C48A3A", "stroke-width": "6", "stroke-linecap": "round" }),
-      svgNode("path", { d: "M116 108c10 14 22 16 32 6", fill: "none", stroke: "#C48A3A", "stroke-width": "6", "stroke-linecap": "round" }),
-      svgNode("path", { d: "M78 142h44", fill: "none", stroke: "#6B3E26", "stroke-width": "6", "stroke-linecap": "round" }),
-    ]);
-  },
-  scream() {
-    return roundSticker("scream", [
-      svgNode("circle", { cx: "100", cy: "100", r: "90", fill: "#FFCC4D" }),
-      svgNode("circle", { cx: "100", cy: "100", r: "90", fill: "none", stroke: "#F5A623", "stroke-width": "5" }),
-      svgNode("path", { d: "M42 70c8 16 18 16 26 0", fill: "none", stroke: "#6B3E26", "stroke-width": "6", "stroke-linecap": "round" }),
-      svgNode("path", { d: "M132 70c8 16 18 16 26 0", fill: "none", stroke: "#6B3E26", "stroke-width": "6", "stroke-linecap": "round" }),
-      svgNode("ellipse", { cx: "64", cy: "96", rx: "14", ry: "18", fill: "#fff", stroke: "#6B3E26", "stroke-width": "4" }),
-      svgNode("ellipse", { cx: "136", cy: "96", rx: "14", ry: "18", fill: "#fff", stroke: "#6B3E26", "stroke-width": "4" }),
-      svgNode("circle", { cx: "64", cy: "98", r: "6", fill: "#6B3E26" }),
-      svgNode("circle", { cx: "136", cy: "98", r: "6", fill: "#6B3E26" }),
-      svgNode("ellipse", { cx: "100", cy: "142", rx: "22", ry: "26", fill: "#6B3E26" }),
-      svgNode("ellipse", { cx: "48", cy: "118", rx: "14", ry: "10", fill: "#F3C7A8" }),
-      svgNode("ellipse", { cx: "152", cy: "118", rx: "14", ry: "10", fill: "#F3C7A8" }),
-    ]);
-  },
+const VISOR_CDN = "https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/";
+const VISOR_ASSETS = {
+  calm: "Slightly smiling face/3D/slightly_smiling_face_3d.png",
+  joy: "Face with tears of joy/3D/face_with_tears_of_joy_3d.png",
+  think: "Thinking face/3D/thinking_face_3d.png",
+  shock: "Astonished face/3D/astonished_face_3d.png",
+  sad: "Crying face/3D/crying_face_3d.png",
+  rage: "Face with symbols on mouth/3D/face_with_symbols_on_mouth_3d.png",
+  grimace: "Grimacing face/3D/grimacing_face_3d.png",
 };
+const visorReady = new Set();
+const visorFailed = new Set();
+let voiceMeter = null;
+let voiceWatch = 0;
+let userTone = "calm";
 
-function setSticker(next, force) {
-  mountStickers();
+function visorUrl(name) {
+  const fileName = VISOR_ASSETS[name];
+  return fileName ? VISOR_CDN + encodeURI(fileName) : "";
+}
+
+function showVisorAsset(name) {
+  const img = avatarEl.querySelector(".visor-emoji");
+  const url = visorUrl(name);
+  if (!img || !url || visorFailed.has(name)) {
+    avatarEl.classList.remove("has-visor-asset");
+    return;
+  }
+  if (visorReady.has(name) && img.dataset.mood === name) {
+    avatarEl.classList.add("has-visor-asset");
+    return;
+  }
+  avatarEl.classList.remove("has-visor-asset");
+  img.dataset.mood = name;
+  img.onload = () => {
+    if (img.dataset.mood !== name) return;
+    visorReady.add(name);
+    if (stickerName === name) avatarEl.classList.add("has-visor-asset");
+  };
+  img.onerror = () => {
+    visorFailed.add(name);
+    if (img.dataset.mood === name) avatarEl.classList.remove("has-visor-asset");
+  };
+  if (img.getAttribute("src") !== url) img.src = url;
+}
+
+function preloadVisorAssets() {
+  Object.keys(VISOR_ASSETS).forEach((name) => {
+    const img = new Image();
+    img.decoding = "async";
+    img.onload = () => visorReady.add(name);
+    img.onerror = () => visorFailed.add(name);
+    img.src = visorUrl(name);
+  });
+}
+
+function gestureFor(name, sample) {
+  const token = normalizeToken(sample);
+  if (/^(salom|hello|hey|rahmat|thanks|thank)$/.test(token)) return "wave";
+  if (/^(xato|wrong|stop|emas|deyil|noto|notogri)$/.test(token)) return "stern";
+  if (name === "joy") return userMissed ? "explain" : "cheer";
+  if (name === "rage") return "rage";
+  if (name === "shock") return "shock";
+  if (name === "sad") return "sad";
+  if (name === "think") return "think";
+  if (name === "grimace") return userMissed ? "stern" : "explain";
+  return "rest";
+}
+
+function setSticker(next, force, sample) {
   const name = STICKER_ALIAS[next] || next;
   if (!STICKER_IDS.has(name) || !avatarEl) return;
   const now = performance.now();
   if (!force && name !== stickerName && now - stickerAt < 200) return;
-  if (name === stickerName) return;
+  const changed = name !== stickerName;
   stickerName = name;
-  stickerAt = now;
+  if (changed) stickerAt = now;
   avatarEl.dataset.sticker = name;
-  avatarEl.querySelectorAll(".sticker.is-shown").forEach((node) => node.classList.remove("is-shown"));
-  const face = avatarEl.querySelector(`.sticker-${name}`);
-  if (face) face.classList.add("is-shown");
+  avatarEl.dataset.gesture = gestureFor(name, sample);
+  if (changed) showVisorAsset(name);
+}
+
+function stopVoiceMeter() {
+  if (voiceWatch) window.clearTimeout(voiceWatch);
+  voiceWatch = 0;
+  if (!voiceMeter) return;
+  try {
+    voiceMeter.stream.getTracks().forEach((track) => track.stop());
+  } catch {
+    // The meter may already be closed.
+  }
+  try {
+    voiceMeter.ctx.close();
+  } catch {
+    // Ignore a context that is already closing.
+  }
+  voiceMeter = null;
+}
+
+function readVoiceTone() {
+  if (!voiceMeter) return "";
+  const data = new Uint8Array(voiceMeter.analyser.fftSize);
+  voiceMeter.analyser.getByteTimeDomainData(data);
+  let sum = 0;
+  for (let index = 0; index < data.length; index += 1) {
+    const sample = (data[index] - 128) / 128;
+    sum += sample * sample;
+  }
+  const level = Math.sqrt(sum / data.length);
+  if (level > 0.16) return "sharp";
+  if (level > 0.06) return "bright";
+  if (level > 0.02) return "calm";
+  return "";
+}
+
+function beginVoiceMeter() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+  navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+    if (!holdingMic) {
+      stream.getTracks().forEach((track) => track.stop());
+      return;
+    }
+    const ctx = new AudioContext();
+    const source = ctx.createMediaStreamSource(stream);
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 1024;
+    source.connect(analyser);
+    voiceMeter = { stream, ctx, analyser };
+    const tick = () => {
+      if (!holdingMic || !voiceMeter) return;
+      const tone = readVoiceTone();
+      if (tone) userTone = tone;
+      if (tone === "sharp") setSticker("shock", true);
+      else if (tone === "bright") setSticker("joy", true);
+      voiceWatch = window.setTimeout(tick, 450);
+    };
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    voiceWatch = window.setTimeout(tick, 450);
+  }).catch(() => {});
 }
 
 function normalizeToken(raw) {
@@ -561,9 +585,12 @@ function isLikelyMiss(text) {
 function noteUserLine(text) {
   userMissed = isLikelyMiss(text);
   const hit = wordMood(text) || stickerFromText(text);
-  if (userMissed) replyMood = "think";
+  if (userMissed && userTone === "sharp") replyMood = "rage";
+  else if (userMissed) replyMood = "grimace";
+  else if (userTone === "sharp") replyMood = "shock";
+  else if (userTone === "bright") replyMood = "joy";
   else if (hit) replyMood = hit;
-  else replyMood = "soft";
+  else replyMood = "calm";
   speechPalette = userMissed ? "firm" : paletteForText(text);
 }
 
@@ -641,11 +668,11 @@ function nudgeMouth(sample, boundary) {
   if (boundary === "sentence") {
     speechPalette = paletteForText(sample) === "calm" ? speechPalette : paletteForText(sample);
     speechCursor = 0;
-    setSticker(openingSticker(sample), true);
+    setSticker(openingSticker(sample), true, sample);
     return;
   }
   if (boundary !== "word" && now - stickerAt < 220) return;
-  setSticker(nextSpeechSticker(sample, paceFast));
+  setSticker(nextSpeechSticker(sample, paceFast), false, sample);
 }
 
 function clearSequence() {
@@ -764,6 +791,7 @@ function speechOutputSupported() {
  */
 function stopListening(options) {
   const submit = Boolean(options && options.submit);
+  stopVoiceMeter();
   if (!micActive && !recognition) {
     holdReleasePending = false;
     holdingMic = false;
@@ -1040,6 +1068,7 @@ function startListening(options) {
   micActive = true;
   syncMicButton();
   setAvatarState("listening");
+  if (hold) beginVoiceMeter();
   setCard(userCardEl, MESSAGES.listeningHint, false);
   setSubtitle(MESSAGES.listeningHint, false);
 
@@ -1070,6 +1099,8 @@ function startListening(options) {
 
 function finishHold() {
   if (holdReleasePending || !holdingMic) return;
+  const heard = readVoiceTone();
+  if (heard) userTone = heard;
   holdingMic = false;
   holdReleasePending = true;
   document.documentElement.classList.remove("is-holding-mic");
@@ -2137,7 +2168,9 @@ function presentReply(serial, text, tutor, langAtSend) {
   };
 
   speechPalette = tutor.surprise || userMissed ? "firm" : paletteForText(spoken);
-  replyMood = tutor.surprise || userMissed ? "huff" : (stickerFromText(spoken) || "soft");
+  if (userMissed && userTone === "sharp") replyMood = "rage";
+  else if (tutor.surprise || userMissed) replyMood = "grimace";
+  else replyMood = stickerFromText(spoken) || "calm";
   if (tutor.surprise || userMissed) {
     setAvatarState("surprised");
     avatarEl.dataset.mood = "lively";
@@ -2236,6 +2269,7 @@ function init() {
   applyTutorMode(readSavedMode(), false);
   loadVoicePrefs();
   setAvatarState("idle");
+  preloadVisorAssets();
   syncStopButton();
   syncReplayButton();
   micBtn.setAttribute("aria-label", "Bosib turing va gapiring");

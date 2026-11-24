@@ -23,7 +23,69 @@
         <section class="stage" aria-label="Ustoz qiyofasi">
           <div class="stage-glow" aria-hidden="true"></div>
 
-          <div id="avatar" class="avatar" data-state="idle" data-sticker="calm"></div>
+          <div id="avatar" class="avatar" data-state="idle" data-sticker="calm" data-gesture="rest">
+            <div class="robot" aria-hidden="true">
+              <div class="robot-arm arm-left">
+                <div class="limb upper"></div>
+                <div class="limb fore"><div class="hand"></div></div>
+              </div>
+              <div class="robot-arm arm-right">
+                <div class="limb upper"></div>
+                <div class="limb fore"><div class="hand"></div></div>
+              </div>
+              <div class="robot-body">
+                <div class="robot-head">
+                  <span class="antenna"></span>
+                  <div class="visor">
+                    <img class="visor-emoji" alt="" />
+                    <svg class="visor-draw" viewBox="0 0 160 72">
+                      <g class="face face-calm">
+                        <path d="M36 30h24M100 30h24" fill="none" stroke="#8ef6ff" stroke-width="6" stroke-linecap="round"/>
+                        <path d="M58 50c14 10 30 10 44 0" fill="none" stroke="#8ef6ff" stroke-width="5" stroke-linecap="round"/>
+                      </g>
+                      <g class="face face-joy">
+                        <path d="M34 36c8-14 20-14 28 0M98 36c8-14 20-14 28 0" fill="none" stroke="#8ef6ff" stroke-width="6" stroke-linecap="round"/>
+                        <path d="M52 44c16 22 40 22 56 0" fill="#14343a" stroke="#8ef6ff" stroke-width="4"/>
+                      </g>
+                      <g class="face face-think">
+                        <path d="M34 24c10 8 22 8 28 0M104 28h24" fill="none" stroke="#8ef6ff" stroke-width="5" stroke-linecap="round"/>
+                        <circle cx="48" cy="38" r="6" fill="#8ef6ff"/>
+                        <circle cx="112" cy="38" r="6" fill="#8ef6ff"/>
+                        <path d="M70 54h28" fill="none" stroke="#8ef6ff" stroke-width="5" stroke-linecap="round"/>
+                      </g>
+                      <g class="face face-shock">
+                        <circle cx="48" cy="30" r="10" fill="none" stroke="#fff4b0" stroke-width="4"/>
+                        <circle cx="112" cy="30" r="10" fill="none" stroke="#fff4b0" stroke-width="4"/>
+                        <circle cx="48" cy="30" r="4" fill="#fff4b0"/>
+                        <circle cx="112" cy="30" r="4" fill="#fff4b0"/>
+                        <ellipse cx="80" cy="54" rx="12" ry="10" fill="#fff4b0"/>
+                      </g>
+                      <g class="face face-sad">
+                        <path d="M34 24c10 10 22 8 28-2M98 22c8 10 22 10 30-2" fill="none" stroke="#9ec6ff" stroke-width="5" stroke-linecap="round"/>
+                        <path d="M40 34h18M102 34h18" fill="none" stroke="#9ec6ff" stroke-width="6" stroke-linecap="round"/>
+                        <path d="M112 40c4 12 4 18 0 26" fill="none" stroke="#7eb6ff" stroke-width="4" stroke-linecap="round"/>
+                        <path d="M58 58c12-12 32-12 44 0" fill="none" stroke="#9ec6ff" stroke-width="5" stroke-linecap="round"/>
+                      </g>
+                      <g class="face face-rage">
+                        <path d="M30 22l28 12M130 22l-28 12" fill="none" stroke="#ffb4a8" stroke-width="6" stroke-linecap="round"/>
+                        <path d="M38 40h20M102 40h20" fill="none" stroke="#ffd0c8" stroke-width="7" stroke-linecap="round"/>
+                        <path d="M56 58c14-12 34-12 48 0" fill="none" stroke="#ffb4a8" stroke-width="5" stroke-linecap="round"/>
+                      </g>
+                      <g class="face face-grimace">
+                        <circle cx="48" cy="30" r="6" fill="#d7fff8"/>
+                        <circle cx="112" cy="30" r="6" fill="#d7fff8"/>
+                        <rect x="48" y="46" width="64" height="16" rx="4" fill="#e9fff8"/>
+                        <path d="M64 46v16M80 46v16M96 46v16" fill="none" stroke="#12343a" stroke-width="2"/>
+                      </g>
+                    </svg>
+                    <span class="visor-glare"></span>
+                  </div>
+                </div>
+                <div class="robot-torso"><span class="chest-light"></span></div>
+              </div>
+              <span class="robot-shadow"></span>
+            </div>
+          </div>
 
           <p id="stage-mode" class="stage-mode">Noldan (A1–A2)</p>
           <p id="subtitle" class="subtitle is-empty">Mikrofonni bosib turing. Qo‘yib yuborsangiz yuboriladi.</p>
