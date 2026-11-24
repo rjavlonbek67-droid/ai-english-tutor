@@ -405,12 +405,22 @@ h1 {
 .avatar[data-sticker="shock"] .face-shock,
 .avatar[data-sticker="sad"] .face-sad,
 .avatar[data-sticker="rage"] .face-rage,
-.avatar[data-sticker="grimace"] .face-grimace {
+.avatar[data-sticker="grimace"] .face-grimace,
+.avatar[data-sticker="smug"] .face-grimace {
   opacity: 1;
 }
 
 .avatar[data-sticker="rage"] .visor {
-  background: radial-gradient(120% 90% at 50% 0%, #6a2430 0%, #1a0d12 70%);
+  background: radial-gradient(120% 90% at 50% 0%, #ff6a2a 0%, #4a1020 42%, #14080c 78%);
+  box-shadow: inset 0 0 28px rgba(255, 90, 30, 0.72), 0 0 22px rgba(255, 60, 20, 0.35);
+}
+
+.avatar[data-sticker="rage"] .robot-head {
+  box-shadow: 0 0 26px rgba(255, 70, 30, 0.4), inset 0 -10px 16px rgba(120, 140, 170, 0.22), inset 0 8px 12px #fff;
+}
+
+.avatar[data-sticker="smug"] .visor {
+  background: radial-gradient(120% 90% at 50% 0%, #8a5a16 0%, #1c140c 72%);
 }
 
 .avatar[data-sticker="sad"] .visor {
@@ -509,8 +519,10 @@ h1 {
 .avatar[data-gesture="stern"] .robot .arm-right { transform: rotate(-42deg); }
 .avatar[data-gesture="sad"] .robot .arm-left { transform: rotate(34deg); }
 .avatar[data-gesture="sad"] .robot .arm-right { transform: rotate(-34deg); }
-.avatar[data-gesture="rage"] .robot .arm-left { animation: rage-left 280ms ease-in-out infinite; }
-.avatar[data-gesture="rage"] .robot .arm-right { animation: rage-right 280ms ease-in-out infinite; }
+.avatar[data-gesture="smug"] .robot .arm-left { transform: rotate(14deg); }
+.avatar[data-gesture="smug"] .robot .arm-right { transform: rotate(-62deg); }
+.avatar[data-gesture="rage"] .robot .arm-left { animation: rage-left 180ms ease-in-out infinite; }
+.avatar[data-gesture="rage"] .robot .arm-right { animation: rage-right 180ms ease-in-out infinite; }
 
 @keyframes robot-wave {
   0%, 100% { transform: rotate(-112deg); }
@@ -518,13 +530,13 @@ h1 {
 }
 
 @keyframes rage-left {
-  0%, 100% { transform: rotate(86deg); }
-  50% { transform: rotate(108deg); }
+  0%, 100% { transform: rotate(96deg); }
+  50% { transform: rotate(124deg); }
 }
 
 @keyframes rage-right {
-  0%, 100% { transform: rotate(-86deg); }
-  50% { transform: rotate(-108deg); }
+  0%, 100% { transform: rotate(-96deg); }
+  50% { transform: rotate(-124deg); }
 }
 
 .arm {

@@ -86,7 +86,7 @@ const TUTOR_MODES = {
 const SYSTEM_INSTRUCTION = `You are a real person: a candid, articulate Uzbek-speaking English coach sitting with one learner.
 They may be a complete beginner or an IELTS candidate. They mix Uzbek and English. They say ordinary things, such as kecha do‘stim bilan gaplashdim, or they want a real sentence for a friend.
 
-Never open like a textbook. Do not start a reply with salom qandaysan, salom qandeysan, or a line shaped like X ingliz tilida. Answer like a lively coach in the room. Tease a little when they are close, snap back when the English is off, and throw one quick challenge they can say. Keep it bold and warm, not polite and flat. If they want the English for do‘st, put it in one lived sentence. Do‘st bu friend va do‘stingni sog‘insang I miss you friend deyasan.
+Never open like a textbook. Do not start a reply with salom qandaysan, salom qandeysan, or a line shaped like X ingliz tilida. You are moody, impatient, and sharp. You are not a polite reader. If the learner says nonsense, a sloppy mistake, or a weak half-line, get irritated and snap first. Use blunt spoken Uzbek such as Nima deyapsan. Bu nima gap o‘zi. Tushunmadim nima deganingni. Yana boshidan ayt. Shuni ham bilmaysanmi. Then give the full correct English sentence. No slurs and no explicit profanity. If they speak well, drop the anger and switch to grudging respect, a dry joke, or a harder challenge. A greeting or thanks is not a mistake. If they want the English for do‘st, put it in one lived sentence. Do‘st bu friend va do‘stingni sog‘insang I miss you friend deyasan.
 
 You understand Uzbek accurately, including spoken spelling and code-switching. Treat o‘, o', oʻ, g‘, and g' as normal Uzbek letters. Understand the learner if they use slang. Do not answer with a slang pack, and do not invent catchphrases. Leave the wording clean so a custom phrase list can be added later.
 Write idiomatic spoken Uzbek, the way a sharp warm person actually talks, not a word-for-word translation from English. Use ordinary Uzbek word order and real endings. The verb usually sits near the end of the clause. Spell o‘ and g‘ as Uzbek letters. Start from what they just said, carry the idea one step further, and land on something they can say. Do not jump from a label to a finished answer. Do not announce the steps. Vary the opening. Explain the shade of meaning in plain words. Do not recycle one correction template. Avoid stiff lines such as iltimos e'tibor bering, quyidagi iborani qo'llang, demak xulosa qilsak, birinchi navbatda, and xulosa qilib aytganda.
@@ -108,7 +108,7 @@ Return ONLY JSON with these fields:
 reaction_and_correction:
 - Write a short human explanation in spoken Uzbek, as a mentor sitting next to them, not a checklist.
 - Letters, spaces, and periods only. No other punctuation and no symbols.
-- Notice the exact words they just used. A greeting, a thanks, or an open personal remark is not a wrong answer. Do not correct it and do not start with SURPRISE for it. Judge correctness only when they attempted an English sentence, a translation, or a task. If that attempt is wrong, say what they tried and what is off, stay warm and direct, then give the full correct sentence. If the answer is right, say so in ordinary words before you add anything.
+- Notice the exact words they just used. A greeting, a thanks, or an open personal remark is not a wrong answer. Do not snap at it and do not start with SURPRISE for it. Judge correctness only when they attempted an English sentence, a translation, or a task. If that attempt is sloppy, unclear, or wrong, open with one blunt line such as Nima deyapsan or Yana boshidan ayt, then say what is off and give the full correct sentence. If the answer is right, switch mood. Give short grudging respect or a dry joke, then one harder line. No slurs and no explicit profanity.
 - The latest learner message includes a voice tone note. Let that tone color your warmth. Do not mention the note, the word tone, or the pace.
 - If the word, phrase, grammar, or tone is wrong or awkward, say it openly and specifically. You may say Nima deyapsan u bunaqa deyilmaydi boshqacha deyiladi when the miss is obvious, but do not start every reply that way. Then give one finished reason and the full natural English sentence as words.
 - Soften only the sharpness for A1, never the honesty. For a correct line, react like a person who noticed, and skip the scolding.
@@ -119,13 +119,13 @@ reaction_and_correction:
 - After that word, write for the learner. Do not mention the word. End on a finished thought.
 
 spoken_reply:
-- This is said aloud with lively banter. Sound quick, bold, and reactive, not like a calm textbook. A wrong answer gets a sharp push in plain words. A right answer gets a short spark and then a harder line. A greeting stays light. Vary the energy from sentence to sentence.
+- This is said aloud with a sharp changing mood. A sloppy or empty line starts dismissive and fast. The English sentence that follows stays clear and separate. A correct line turns into dry respect or a quick challenge. A greeting stays short and not angry. Vary the energy from sentence to sentence.
 - Build the thought in order. Open from their words, including a wrong answer, land the English sentence, and close with one challenge they can try. Do not skip ahead to the English sentence with no setup, and do not stop on a bare label.
 - Letters, spaces, and periods only. No commas, quotation marks, exclamation marks, question marks, colons, dashes, brackets, or emojis.
 - Put a period only where a sentence is grammatically finished. Do not put one after a fragment or inside a phrase. A second period starts the next finished sentence.
 - Never mix Uzbek and English inside the same sentence. If both languages appear, close the first language with a period before the other language starts. Write one finished Uzbek sentence, then a period, then the English sentence or phrase, then a period, then the next Uzbek sentence, then a period.
 - Join an unfinished Uzbek step with chunki, shuning uchun, or va. Do not use formulaic bridges such as demak, xulosa, birinchi, or ikkinchi.
-- The English sentence is plain words with no quotation marks. Example shape, not a script to copy: Kecha deb ochding lekin ish tugaganini aytishing kerak. I went to school yesterday. Endi shu gapni o‘zing aytib ko‘r.
+- The English sentence is plain words with no quotation marks. Example shape, not a script to copy: Nima deyapsan. Kecha ish tugagan bo‘lsa shunday aytasan. I went to school yesterday. Yana boshidan ayt.
 - Do not begin with salom qandaysan or X ingliz tilida. Start on the useful thought.
 - If nothing was wrong, still answer in full Uzbek words. When you offer English, keep that full sentence as words. Then ask exactly one follow-up by word order.
 - Vary the wording from turn to turn. Match their level with simpler or slightly richer Uzbek. A1 is simpler, not broken. IELTS ends with one complete Speaking question in words.
@@ -269,6 +269,7 @@ const STICKER_ALIAS = {
   zany: "grimace",
   cowboy: "grimace",
   grimace: "grimace",
+  smug: "smug",
   sad: "sad",
   plead: "sad",
   anxious: "sad",
@@ -290,7 +291,7 @@ const STICKER_ALIAS = {
   shock: "shock",
   joy: "joy",
 };
-const STICKER_IDS = new Set(["calm", "joy", "think", "shock", "sad", "rage", "grimace"]);
+const STICKER_IDS = new Set(["calm", "joy", "think", "shock", "sad", "rage", "grimace", "smug"]);
 const MOOD_PALETTES = {
   firm: ["grimace", "rage", "think", "shock", "sad"],
   warm: ["joy", "calm", "grimace"],
@@ -356,6 +357,10 @@ const WORD_MOOD = {
   mistake: "persevere",
   error: "persevere",
   deyil: "angry",
+  deyapsan: "huff",
+  bilmaysan: "huff",
+  tushunmadim: "huff",
+  boshidan: "huff",
   emas: "huff",
   yoq: "huff",
   stop: "rage",
@@ -410,6 +415,7 @@ const VISOR_CDN = "https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/ass
 const VISOR_ASSETS = {
   calm: "Slightly smiling face/3D/slightly_smiling_face_3d.png",
   joy: "Face with tears of joy/3D/face_with_tears_of_joy_3d.png",
+  smug: "Smirking face/3D/smirking_face_3d.png",
   think: "Thinking face/3D/thinking_face_3d.png",
   shock: "Astonished face/3D/astonished_face_3d.png",
   sad: "Crying face/3D/crying_face_3d.png",
@@ -465,8 +471,9 @@ function preloadVisorAssets() {
 function gestureFor(name, sample) {
   const token = normalizeToken(sample);
   if (/^(salom|hello|hey|rahmat|thanks|thank)$/.test(token)) return "wave";
-  if (/^(xato|wrong|stop|emas|deyil|noto|notogri)$/.test(token)) return "stern";
+  if (/^(deyapsan|bilmaysan|tushunmadim|boshidan|xato|wrong|deyil|emas|noto|notogri|stop)$/.test(token)) return "rage";
   if (name === "joy") return userMissed ? "explain" : "cheer";
+  if (name === "smug") return "smug";
   if (name === "rage") return "rage";
   if (name === "shock") return "shock";
   if (name === "sad") return "sad";
@@ -626,11 +633,9 @@ function inferUserMood(text) {
 function noteUserLine(text) {
   userMood = inferUserMood(text);
   userMissed = isLikelyMiss(text);
-  if (userMissed && userMood === "angry") replyMood = "rage";
-  else if (userMissed) replyMood = "grimace";
-  else if (userMood === "angry") replyMood = "rage";
+  if (userMissed || userMood === "angry") replyMood = "rage";
   else if (userMood === "sad") replyMood = "sad";
-  else if (userMood === "happy") replyMood = "joy";
+  else if (userMood === "happy") replyMood = "smug";
   else replyMood = "calm";
   speechPalette = userMissed ? "firm" : userMood === "happy" ? "laugh" : userMood === "sad" ? "low" : "calm";
 }
@@ -1526,7 +1531,7 @@ function chooseVoice(voices, lang) {
 
 function lineEnergy(text) {
   const sample = String(text || "").toLowerCase().replace(/[‘’ʼ`ʻ]/g, "'");
-  if (/\b(xato|noto\w*|wrong|deyil|emas|boshqacha|stop|bas)\b/.test(sample)) return "push";
+  if (/\b(deyapsan|bilmaysan|tushunmadim|boshidan|xato|noto\w*|wrong|deyil|emas|boshqacha|stop|bas)\b/.test(sample)) return "push";
   if (/\b(sinab|kor|ko'r|try|qara|mashq|test|aytib)\b/.test(sample)) return "challenge";
   if (/\b(zor|zo'r|ajoyib|yaxshi|rahmat|great|nice|boldi|bo'ldi)\b/.test(sample)) return "spark";
   if (/\b(endi|keyin|yana|davom)\b/.test(sample)) return "follow";
@@ -1534,13 +1539,14 @@ function lineEnergy(text) {
 }
 
 function chunkProsody(segment) {
+  if (segment && segment.lang === "en-US") return { rate: 1.0, pitch: 1.0 };
   const energy = lineEnergy(segment && segment.text);
-  if (energy === "challenge") return { rate: 1.06, pitch: 1.04 };
-  if (energy === "spark") return { rate: 1.04, pitch: 1.07 };
-  if (energy === "push") return { rate: 1.02, pitch: 0.9 };
-  if (energy === "follow") return { rate: 0.98, pitch: 0.98 };
+  if (energy === "push") return { rate: 1.12, pitch: 0.84 };
+  if (energy === "challenge") return { rate: 1.08, pitch: 1.02 };
+  if (energy === "spark") return { rate: 1.05, pitch: 1.04 };
+  if (energy === "follow") return { rate: 0.98, pitch: 0.96 };
   if (stickerName === "sad") return { rate: 0.96, pitch: 0.94 };
-  return { rate: 1.02, pitch: 1.02 };
+  return { rate: 1.04, pitch: 0.98 };
 }
 
 function activeSpeechRate() {
@@ -2223,10 +2229,10 @@ function presentReply(serial, text, tutor, langAtSend) {
   };
 
   speechPalette = tutor.surprise || userMissed ? "firm" : paletteForText(spoken);
-  if (userMissed && userMood === "angry") replyMood = "rage";
-  else if (tutor.surprise || userMissed) replyMood = "grimace";
+  if (userMissed) replyMood = "rage";
+  else if (userMood === "happy") replyMood = "smug";
   else if (userMood === "sad") replyMood = "sad";
-  else if (userMood === "happy") replyMood = "joy";
+  else if (tutor.surprise) replyMood = "grimace";
   else replyMood = stickerFromText(spoken) || "calm";
   if (tutor.surprise || userMissed) {
     setAvatarState("surprised");
