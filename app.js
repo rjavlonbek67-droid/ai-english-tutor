@@ -108,7 +108,8 @@ Return ONLY JSON with these fields:
 reaction_and_correction:
 - Write a short human explanation in spoken Uzbek, as a mentor sitting next to them, not a checklist.
 - Letters, spaces, and periods only. No other punctuation and no symbols.
-- Notice the exact words they just used. If the English or Uzbek answer is wrong, say what they tried and what is off, stay warm and direct, then give the full correct sentence. If the answer is right, say so in ordinary words before you add anything.
+- Notice the exact words they just used. A greeting, a thanks, or an open personal remark is not a wrong answer. Do not correct it and do not start with SURPRISE for it. Judge correctness only when they attempted an English sentence, a translation, or a task. If that attempt is wrong, say what they tried and what is off, stay warm and direct, then give the full correct sentence. If the answer is right, say so in ordinary words before you add anything.
+- The latest learner message includes a voice tone note. Let that tone color your warmth. Do not mention the note, the word tone, or the pace.
 - If the word, phrase, grammar, or tone is wrong or awkward, say it openly and specifically. You may say Nima deyapsan u bunaqa deyilmaydi boshqacha deyiladi when the miss is obvious, but do not start every reply that way. Then give one finished reason and the full natural English sentence as words.
 - Soften only the sharpness for A1, never the honesty. For a correct line, react like a person who noticed, and skip the scolding.
 - When the mode is IELTS, or they ask for formal English, show the everyday sentence and one higher-band sentence, with one concrete reason they differ.
@@ -537,8 +538,12 @@ function beginVoiceMeter() {
       if (!holdingMic || !voiceMeter) return;
       const tone = readVoiceTone();
       if (tone) userTone = tone;
-      if (tone === "sharp") setSticker("shock", true);
-      else if (tone === "bright") setSticker("joy", true);
+      const liveMood = inferUserMood(inputEl.value);
+      userMood = liveMood;
+      if (liveMood === "angry") setSticker("rage", true);
+      else if (liveMood === "sad") setSticker("sad", true);
+      else if (liveMood === "happy") setSticker("joy", true);
+      else if (tone === "sharp") setSticker("shock", true);
       voiceWatch = window.setTimeout(tick, 450);
     };
     if (ctx.state === "suspended") ctx.resume().catch(() => {});
@@ -577,21 +582,57 @@ function paletteForText(text) {
   return "calm";
 }
 
+function isOpenOrGreeting(sample) {
+  const line = String(sample || "").trim();
+  if (!line) return true;
+  return /^(salom|assalomu alaykum|hello|hi|hey|qandaysan|qalaysan|yaxshimisiz|rahmat|thanks|thank you|good morning|good night|hayr|bye|ok|okay|mayli|ha|yo'q)(\s+\w+){0,3}$/i.test(line);
+}
+
 function isLikelyMiss(text) {
   const sample = String(text || "").toLowerCase().replace(/[‘’ʼ`ʻ]/g, "'");
+  if (isOpenOrGreeting(sample)) return false;
   return MISS_PATTERNS.some((pattern) => pattern.test(sample));
 }
 
+let speechTicks = [];
+let userMood = "calm";
+let userPace = "steady";
+
+function noteSpeechPace() {
+  const now = performance.now();
+  speechTicks.push(now);
+  speechTicks = speechTicks.filter((mark) => now - mark < 2500);
+  if (speechTicks.length < 3) {
+    userPace = "steady";
+    return;
+  }
+  const span = (speechTicks[speechTicks.length - 1] - speechTicks[0]) / 1000;
+  const rate = (speechTicks.length - 1) / Math.max(span, 0.4);
+  if (rate > 2.4) userPace = "quick";
+  else if (rate < 0.85) userPace = "slow";
+  else userPace = "steady";
+}
+
+function inferUserMood(text) {
+  const sample = String(text || "").toLowerCase().replace(/[‘’ʼ`ʻ]/g, "'");
+  if (/\b(jahlim|gazab|g'azab|angry|hate|jiddiy|bas qil|yomon)\b/.test(sample) || (userTone === "sharp" && userPace === "quick")) {
+    return "angry";
+  }
+  if (/\b(afsus|xafa|sad|yigla|charchadim|qiyin|alam)\b/.test(sample)) return "sad";
+  if (/\b(yaxshi|rahmat|zor|zo'r|happy|great|ajoyib|kul|thanks)\b/.test(sample) || userTone === "bright") return "happy";
+  return "calm";
+}
+
 function noteUserLine(text) {
+  userMood = inferUserMood(text);
   userMissed = isLikelyMiss(text);
-  const hit = wordMood(text) || stickerFromText(text);
-  if (userMissed && userTone === "sharp") replyMood = "rage";
+  if (userMissed && userMood === "angry") replyMood = "rage";
   else if (userMissed) replyMood = "grimace";
-  else if (userTone === "sharp") replyMood = "shock";
-  else if (userTone === "bright") replyMood = "joy";
-  else if (hit) replyMood = hit;
+  else if (userMood === "angry") replyMood = "rage";
+  else if (userMood === "sad") replyMood = "sad";
+  else if (userMood === "happy") replyMood = "joy";
   else replyMood = "calm";
-  speechPalette = userMissed ? "firm" : paletteForText(text);
+  speechPalette = userMissed ? "firm" : userMood === "happy" ? "laugh" : userMood === "sad" ? "low" : "calm";
 }
 
 function stickerFromText(text) {
@@ -757,13 +798,9 @@ function clearHandsFreeTimer() {
   handsFreeTimer = 0;
 }
 
-function showSpeechNotice(message) {
-  speechNoticeEl.textContent = message || "";
-}
+function showSpeechNotice() {}
 
-function clearSpeechNotice() {
-  speechNoticeEl.textContent = "";
-}
+function clearSpeechNotice() {}
 
 function toggleLanguage() {
   speechLang = speechLang === "uz-UZ" ? "en-US" : "uz-UZ";
@@ -961,6 +998,7 @@ function absorbResults(event, committedIndexes) {
     if (index >= event.resultIndex) interim = speechJoin(interim, piece);
   }
   pendingInterim = interim.trim();
+  noteSpeechPace();
   showHeardText();
 }
 
@@ -999,9 +1037,9 @@ function attachRecognizer(Recognition, generation, hold) {
       setHandsFree(false, true);
     }
     setAvatarState("idle");
-    setCard(userCardEl, message, false);
-    setSubtitle(message, false);
-    showSpeechNotice(message);
+    if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+      setSubtitle(message, false);
+    }
   };
 
   rec.onend = () => {
@@ -1065,12 +1103,12 @@ function startListening(options) {
   liveTranscript = "";
   committedFinal = "";
   pendingInterim = "";
+  speechTicks = [];
+  userPace = "steady";
   micActive = true;
   syncMicButton();
   setAvatarState("listening");
   if (hold) beginVoiceMeter();
-  setCard(userCardEl, MESSAGES.listeningHint, false);
-  setSubtitle(MESSAGES.listeningHint, false);
 
   try {
     attachRecognizer(Recognition, generation, hold);
@@ -1487,6 +1525,9 @@ function chooseVoice(voices, lang) {
 }
 
 function chunkProsody() {
+  if (stickerName === "sad") return { rate: 0.9, pitch: 0.93 };
+  if (stickerName === "joy") return { rate: 0.94, pitch: 0.96 };
+  if (stickerName === "rage") return { rate: 0.92, pitch: 0.9 };
   return { rate: 0.93, pitch: 0.95 };
 }
 
@@ -1805,7 +1846,9 @@ function buildUserTurn(text, lang) {
       ? "The learner's selected speech language is en-US."
       : "The learner's selected speech language is uz-UZ. They may write in Uzbek, English, or a mix.";
   const mode = TUTOR_MODES[tutorMode];
-  return `Coach mode: ${mode.label}. ${mode.coach}\n${langNote}\nLearner message:\n${text}`;
+  const mood = inferUserMood(text);
+  userMood = mood;
+  return `Coach mode: ${mode.label}. ${mode.coach}\n${langNote}\nVoice tone: ${mood}. Speaking pace: ${userPace}. Do not repeat this note.\nLearner message:\n${text}`;
 }
 
 function buildTutorRequestBody(text, lang) {
@@ -2168,8 +2211,10 @@ function presentReply(serial, text, tutor, langAtSend) {
   };
 
   speechPalette = tutor.surprise || userMissed ? "firm" : paletteForText(spoken);
-  if (userMissed && userTone === "sharp") replyMood = "rage";
+  if (userMissed && userMood === "angry") replyMood = "rage";
   else if (tutor.surprise || userMissed) replyMood = "grimace";
+  else if (userMood === "sad") replyMood = "sad";
+  else if (userMood === "happy") replyMood = "joy";
   else replyMood = stickerFromText(spoken) || "calm";
   if (tutor.surprise || userMissed) {
     setAvatarState("surprised");

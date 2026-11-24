@@ -87,11 +87,11 @@
             </div>
           </div>
 
-          <p id="stage-mode" class="stage-mode">Noldan (A1–A2)</p>
-          <p id="subtitle" class="subtitle is-empty">Mikrofonni bosib turing. Qo‘yib yuborsangiz yuboriladi.</p>
+          <p id="stage-mode" class="stage-mode" hidden>Noldan (A1–A2)</p>
+          <p id="subtitle" class="subtitle is-empty"></p>
 
-          <div class="stage-foot">
-            <p id="status" class="status" data-state="idle" role="status" aria-live="polite">
+          <div class="stage-foot" hidden>
+            <p id="status" class="status" data-state="idle" role="status">
               <span class="status-bars" aria-hidden="true"><i></i><i></i><i></i></span>
               <span id="status-text">Kutmoqda</span>
             </p>
@@ -99,15 +99,15 @@
         </section>
 
         <section class="conversation" aria-label="Suhbat">
-        <p id="speech-notice" class="speech-notice" aria-live="polite"></p>
+        <p id="speech-notice" class="speech-notice" hidden></p>
 
         <form id="composer" class="composer">
-          <button id="mic-btn" class="mic-btn" type="button" aria-pressed="false">
+          <button id="mic-btn" class="mic-btn" type="button" aria-pressed="false" aria-label="Bosib turing va gapiring">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 15a3 3 0 0 0 3-3V7a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Z" />
               <path d="M6.5 11a5.5 5.5 0 0 0 11 0M12 16.5V20M8.5 20h7" />
             </svg>
-            <span id="mic-label">Mikrofon</span>
+            <span id="mic-label" hidden>Mikrofon</span>
           </button>
 
           <label class="sr-only" for="user-input">Xabar</label>
@@ -120,7 +120,7 @@
             placeholder="Kecha nima qilganingni inglizcha aytib ber"
           />
 
-          <button id="send-btn" class="send-btn" type="submit">Yuborish</button>
+          <button id="send-btn" class="send-btn" type="submit" hidden>Yuborish</button>
         </form>
         </section>
       </main>
