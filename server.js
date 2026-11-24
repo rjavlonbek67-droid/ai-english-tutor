@@ -12,13 +12,15 @@
  *   - Set the GROQ_API_KEY environment variable in the host dashboard.
  *   - Optional GROQ_MODEL picks the first Groq model. Others are tried if it is unavailable.
  *   - Do not commit .env, paste the key into chat, or put it in a screenshot.
- *   - The browser only calls /api/chat. The key stays in process.env.
+ *   - The browser calls /api/chat and /api/speak. The key stays in process.env.
+ *   - Spoken replies are generated live. No audio files are stored.
  */
 
 import express from "express";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import { normalizeSegments, synthesizeParts } from "./tts.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
@@ -30,6 +32,7 @@ const app = express();
 const port = Number(process.env.PORT) || 3000;
 
 app.disable("x-powered-by");
+app.set("trust proxy", 1);
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/api/health", (_req, res) => {
@@ -37,6 +40,44 @@ app.get("/api/health", (_req, res) => {
     mode: "backend",
     configured: Boolean(groqKey()),
   });
+});
+
+const speakHits = new Map();
+
+function allowSpeak(ip) {
+  const now = Date.now();
+  const recent = (speakHits.get(ip) || []).filter((stamp) => now - stamp < 60000);
+  if (recent.length >= 80) {
+    speakHits.set(ip, recent);
+    return false;
+  }
+  recent.push(now);
+  speakHits.set(ip, recent);
+  return true;
+}
+
+app.post("/api/speak", async (req, res) => {
+  if (!allowSpeak(req.ip || "local")) {
+    res.status(429).json({ error: "tts" });
+    return;
+  }
+  const segments = normalizeSegments(req.body);
+  if (!segments.length) {
+    res.status(400).json({ error: "invalid-body" });
+    return;
+  }
+  try {
+    const parts = await synthesizeParts(segments);
+    res.json({
+      parts: parts.map((part) => ({
+        lang: part.lang,
+        words: part.words,
+        audio: part.audio.toString("base64"),
+      })),
+    });
+  } catch {
+    res.status(502).json({ error: "tts" });
+  }
 });
 
 app.post("/api/chat", async (req, res) => {
@@ -251,6 +292,10 @@ app.use((req, res, next) => {
     pathname.startsWith("/.git") ||
     pathname === "/config.js" ||
     pathname === "/config.local.js" ||
+    pathname === "/server.js" ||
+    pathname === "/tts.js" ||
+    pathname === "/package.json" ||
+    pathname === "/package-lock.json" ||
     pathname.includes("node_modules")
   ) {
     res.status(404).end();

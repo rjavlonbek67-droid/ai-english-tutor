@@ -690,11 +690,13 @@ function startMouth() {
     if (!mouthRunning) return;
     const since = now - mouthBoostAt;
     const decay = mouthBoost * Math.exp(-since / 150);
-    let speaking = false;
+    let speaking = neuralSpeaking;
     try {
-      speaking = speechOutputSupported() && (window.speechSynthesis.speaking || window.speechSynthesis.pending);
+      speaking =
+        speaking ||
+        (speechOutputSupported() && (window.speechSynthesis.speaking || window.speechSynthesis.pending));
     } catch {
-      speaking = false;
+      speaking = neuralSpeaking;
     }
     const cadence = speaking && since > 260 ? 0.16 * (0.5 + 0.5 * Math.sin(now / 170)) : 0;
     setMouth(Math.min(1, decay + cadence));
@@ -888,6 +890,90 @@ function stopListening(options) {
   return true;
 }
 
+let neuralAudio = null;
+let neuralUrls = [];
+let neuralAbort = null;
+let neuralPoll = 0;
+let neuralSpeaking = false;
+let audioUnlocked = false;
+let settleNeural = null;
+
+const SILENT_WAV =
+  "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+
+function getNeuralAudio() {
+  if (!neuralAudio) {
+    neuralAudio = new Audio();
+    neuralAudio.preload = "auto";
+    neuralAudio.setAttribute("playsinline", "");
+  }
+  return neuralAudio;
+}
+
+function unlockAudio() {
+  if (audioUnlocked || typeof Audio !== "function") return;
+  try {
+    const blip = new Audio();
+    blip.setAttribute("playsinline", "");
+    blip.src = SILENT_WAV;
+    const pending = blip.play();
+    if (pending && typeof pending.then === "function") {
+      pending
+        .then(() => {
+          audioUnlocked = true;
+          blip.pause();
+        })
+        .catch(() => {});
+    }
+  } catch {
+    // A later tap can still unlock playback.
+  }
+}
+
+function releaseNeuralElement() {
+  neuralSpeaking = false;
+  if (neuralPoll) {
+    clearInterval(neuralPoll);
+    neuralPoll = 0;
+  }
+  neuralUrls.forEach((url) => URL.revokeObjectURL(url));
+  neuralUrls = [];
+  if (!neuralAudio) return;
+  neuralAudio.onended = null;
+  neuralAudio.onerror = null;
+  try {
+    neuralAudio.pause();
+  } catch {
+    // The clip had already stopped.
+  }
+  try {
+    neuralAudio.removeAttribute("src");
+    neuralAudio.load();
+  } catch {
+    // Ignore browsers that reject an empty media element.
+  }
+}
+
+function stopNeuralAudio() {
+  if (neuralAbort) {
+    neuralAbort.abort();
+    neuralAbort = null;
+  }
+  if (settleNeural) {
+    const settle = settleNeural;
+    settleNeural = null;
+    settle();
+  }
+  releaseNeuralElement();
+}
+
+function bytesFromBase64(value) {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return bytes;
+}
+
 function flushSpeechQueue() {
   if (!speechOutputSupported()) return;
   try {
@@ -909,6 +995,7 @@ function cancelSpeech() {
   clearSpeechWatchdog();
   syncStopButton();
   flushSpeechQueue();
+  stopNeuralAudio();
   stopMouth();
 }
 
@@ -1093,7 +1180,6 @@ function startListening(options) {
     clearHandsFreeTimer();
     resumeAfterThisSpeech = false;
   } else if (speechArmed) return;
-  unlockSpeech();
   const Recognition = getRecognitionCtor();
   if (!Recognition) {
     holdingMic = false;
@@ -1107,6 +1193,7 @@ function startListening(options) {
   }
 
   beginTurn();
+  unlockSpeech();
   if (hold) {
     holdingMic = true;
     document.documentElement.classList.add("is-holding-mic");
@@ -1642,43 +1729,13 @@ function watchSpeech(token, serial, maxMs) {
   }, 300);
 }
 
-async function speakReply(text, lang, serial, options) {
-  const lively = Boolean(options && options.lively);
-  const token = ++speechToken;
-  lastSpoken = { text, lang, lively };
-  syncReplayButton();
-  if (!speechOutputSupported()) {
-    speechArmed = false;
-    resumeAfterThisSpeech = false;
-    syncStopButton();
-    showSpeechNotice(MESSAGES.noTts);
-    if (serial === requestSerial) setAvatarState("idle");
-    return;
-  }
-
-  if (serial !== requestSerial) return;
-  speechArmed = true;
-  resumeAfterThisSpeech = false;
-  syncStopButton();
-  setAvatarState("speaking");
-  startMouth();
+async function speakWithBrowser(segments, token, serial, lively, text) {
   const voices = await ensureVoices();
   if (token !== speechToken || serial !== requestSerial) return;
-
   const rate = activeSpeechRate();
-  const segments = spokenSegments(prepareSpokenText(text));
-  if (!segments.length) {
-    speechArmed = false;
-    resumeAfterThisSpeech = false;
-    syncStopButton();
-    if (serial === requestSerial) setAvatarState("idle");
-    return;
-  }
-  if (lively) avatarEl.dataset.mood = "lively";
-
   const maxMs = Math.min(
     180000,
-    Math.max(12000, (text.length / Math.max(rate, 0.75) / 7) * 1000 + segments.length * 700 + 5000)
+    Math.max(12000, (String(text || "").length / Math.max(rate, 0.75) / 7) * 1000 + segments.length * 700 + 5000)
   );
   let index = 0;
 
@@ -1751,8 +1808,203 @@ async function speakReply(text, lang, serial, options) {
   speakNext();
 }
 
+function currentNeuralWord(words, ms) {
+  let current = "";
+  words.forEach((word) => {
+    const start = Number(word.start) || 0;
+    const end = Number(word.end) || start;
+    if (ms + 40 >= start && ms < end + 30) current = word.text || current;
+  });
+  return current;
+}
+
+async function speakWithNeural(segments, token, serial, lively) {
+  const controller = new AbortController();
+  neuralAbort = controller;
+  const timeoutId = window.setTimeout(() => controller.abort(), 12000);
+  let payload = null;
+  try {
+    const response = await fetch("/api/speak", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+      body: JSON.stringify({
+        segments: segments.map((segment) => {
+          const prosody = chunkProsody(segment);
+          return {
+            text: segment.text,
+            lang: segment.lang,
+            rate: prosody.rate,
+            pitch: prosody.pitch,
+          };
+        }),
+      }),
+      signal: controller.signal,
+    });
+    if (!response.ok) return false;
+    payload = await response.json();
+  } catch (error) {
+    if (error && error.name === "AbortError") return token !== speechToken;
+    return false;
+  } finally {
+    window.clearTimeout(timeoutId);
+    if (neuralAbort === controller) neuralAbort = null;
+  }
+
+  if (token !== speechToken || serial !== requestSerial) return true;
+  const parts = Array.isArray(payload && payload.parts) ? payload.parts : [];
+  if (parts.length !== segments.length) return false;
+  if (parts.some((part) => typeof part?.audio !== "string" || part.audio.length < 80)) return false;
+
+  return new Promise((resolve) => {
+    const audio = getNeuralAudio();
+    let settled = false;
+    const finish = (started) => {
+      if (settled) return;
+      settled = true;
+      settleNeural = null;
+      if (neuralPoll) {
+        clearInterval(neuralPoll);
+        neuralPoll = 0;
+      }
+      resolve(started);
+    };
+    settleNeural = () => finish(true);
+    const playAt = (partIndex) => {
+      if (settled) return;
+      if (token !== speechToken || serial !== requestSerial) {
+        finish(true);
+        return;
+      }
+      if (partIndex >= parts.length) {
+        neuralSpeaking = false;
+        finishSpeech(token, serial, "end");
+        finish(true);
+        return;
+      }
+      const part = parts[partIndex];
+      const segment = segments[partIndex];
+      let url = "";
+      try {
+        const blob = new Blob([bytesFromBase64(part.audio)], { type: "audio/mpeg" });
+        url = URL.createObjectURL(blob);
+        neuralUrls.push(url);
+      } catch {
+        releaseNeuralElement();
+        finish(false);
+        return;
+      }
+      const words = Array.isArray(part.words) ? part.words : [];
+      let lastWord = "";
+      const syncWord = () => {
+        if (token !== speechToken) return;
+        const word = currentNeuralWord(words, audio.currentTime * 1000);
+        if (!word || word === lastWord) return;
+        lastWord = word;
+        nudgeMouth(word, "word");
+      };
+      if (neuralPoll) clearInterval(neuralPoll);
+      neuralPoll = window.setInterval(syncWord, 120);
+      audio.onended = () => {
+        if (token !== speechToken || settled) return;
+        const upcoming = segments[partIndex + 1];
+        const gap = upcoming && upcoming.lang !== segment.lang ? 110 : 36;
+        window.setTimeout(() => playAt(partIndex + 1), gap);
+      };
+      audio.onerror = () => {
+        if (settled) return;
+        releaseNeuralElement();
+        if (partIndex > 0) {
+          void speakWithBrowser(
+            segments.slice(partIndex),
+            token,
+            serial,
+            lively,
+            segments
+              .slice(partIndex)
+              .map((item) => item.text)
+              .join(" ")
+          );
+          finish(true);
+          return;
+        }
+        finish(false);
+      };
+      avatarEl.dataset.mood = segment.lang === "en-US" ? "clear" : lively ? "lively" : "uz";
+      setSticker(openingSticker(segment.text), true, segment.text);
+      nudgeMouth(segment.text.slice(0, 12), "sentence");
+      audio.src = url;
+      neuralSpeaking = true;
+      const pending = audio.play();
+      if (pending && typeof pending.then === "function") {
+        pending.catch(() => {
+          if (settled) return;
+          releaseNeuralElement();
+          if (partIndex > 0) {
+            void speakWithBrowser(
+              segments.slice(partIndex),
+              token,
+              serial,
+              lively,
+              segments
+                .slice(partIndex)
+                .map((item) => item.text)
+                .join(" ")
+            );
+            finish(true);
+            return;
+          }
+          finish(false);
+        });
+      }
+    };
+    playAt(0);
+  });
+}
+
+async function speakReply(text, lang, serial, options) {
+  const lively = Boolean(options && options.lively);
+  const token = ++speechToken;
+  lastSpoken = { text, lang, lively };
+  syncReplayButton();
+  stopNeuralAudio();
+  flushSpeechQueue();
+  if (serial !== requestSerial) return;
+
+  const segments = spokenSegments(prepareSpokenText(text));
+  if (!segments.length) {
+    speechArmed = false;
+    resumeAfterThisSpeech = false;
+    syncStopButton();
+    if (serial === requestSerial) setAvatarState("idle");
+    return;
+  }
+
+  speechArmed = true;
+  resumeAfterThisSpeech = false;
+  syncStopButton();
+  setAvatarState("speaking");
+  startMouth();
+  if (lively) avatarEl.dataset.mood = "lively";
+
+  let started = false;
+  if (location.protocol !== "file:") {
+    started = await speakWithNeural(segments, token, serial, lively);
+  }
+  if (started || token !== speechToken || serial !== requestSerial) return;
+  if (!speechOutputSupported()) {
+    speechArmed = false;
+    resumeAfterThisSpeech = false;
+    syncStopButton();
+    showSpeechNotice(MESSAGES.noTts);
+    if (serial === requestSerial) setAvatarState("idle");
+    return;
+  }
+  void speakWithBrowser(segments, token, serial, lively, text);
+}
+
 function stopSpeaking() {
-  if (!speechArmed && !(speechOutputSupported() && window.speechSynthesis.speaking)) return;
+  if (!speechArmed && !neuralSpeaking && !(speechOutputSupported() && window.speechSynthesis.speaking)) return;
   clearSequence();
   clearHandsFreeTimer();
   resumeAfterThisSpeech = false;
@@ -1762,11 +2014,11 @@ function stopSpeaking() {
 
 function replaySpeech() {
   if (!lastSpoken) return;
-  unlockSpeech();
   clearHandsFreeTimer();
   resumeAfterThisSpeech = false;
   stopListening({ submit: false });
   cancelSpeech();
+  unlockSpeech();
   void speakReply(lastSpoken.text, lastSpoken.lang, requestSerial, {
     replay: true,
     lively: Boolean(lastSpoken.lively),
@@ -1823,6 +2075,7 @@ function tutorError(userMessage) {
 }
 
 function unlockSpeech() {
+  unlockAudio();
   if (!speechOutputSupported()) return;
   try {
     window.speechSynthesis.resume();
@@ -2268,9 +2521,9 @@ function presentReply(serial, text, tutor, langAtSend) {
 
 async function handleSubmit(event) {
   event.preventDefault();
-  unlockSpeech();
   const text = inputEl.value.trim();
   const serial = beginTurn();
+  unlockSpeech();
 
   if (!text) {
     replyMood = "anxious";
